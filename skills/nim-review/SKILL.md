@@ -80,12 +80,18 @@ findings the tools caught and which came from reading.
 ```
 
 - **Must fix**: wrong results, any `Defect` (crash) reachable from valid input or valid state, memory
-  or thread unsafety, swallowed errors, security.
+  or thread unsafety, swallowed errors, security. A data race or a memory error you can show by
+  reading the code is Must fix even when a probe does not reproduce it: such bugs depend on timing
+  and the allocator. Say whether you reproduced it.
 - **Should fix**: API and error-handling rules that will cost callers later.
 - **Consider**: idiom and style; at most a handful, grouped by kind rather than repeated per line.
 - Every finding has a place, a rule and a fix. The rule is a BN ID or the closest section of
   nim-best-practices; when no section covers it, write `Rule: none in the guide` and state the
   mechanism (what fails, under which input). Do not report taste without a rule.
+  Where the hard defects live in the guide: copies of a type with `=destroy`, hooks and moves in
+  section 3; `addr`/`ptr` into a `seq` or `string` that later grows, `cast`, `UncheckedArray`,
+  `cstring` lifetimes in section 8; threads, `{.cast(gcsafe).}` and `asyncCheck` in section 7;
+  templates and macros under "Templates and macros" in section 4.
 - "What is already good" is required; it tells the author what not to change.
 
 ## 5. Offer the configuration

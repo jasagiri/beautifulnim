@@ -73,10 +73,18 @@ reported by `beautifulnim check` (the CLI in this repository); rules the compile
   code. When both forms exist, the value type gets the plain name and the other `FooRef` (NEP1
   gives the plain name to the variety used most; the Status guide always suffixes `Ref`; follow the
   project).
-- **Resources get a destructor, not a finalizer.** Write `=destroy`, forbid copies with
-  `=copy {.error.}` if the type owns something unique, and reset in `=wasMoved`. Destructors must not
-  fail or raise; give the type an explicit `close` that reports errors, and let `=destroy` be the
-  best-effort fallback. Finalizers (`new(x, finalizer)`) are not deterministic (Status).
+- **Resources get a destructor, not a finalizer.** Write `=destroy`, decide what a copy means, and
+  reset in `=wasMoved`. Destructors must not fail or raise; give the type an explicit `close` that
+  reports errors, and let `=destroy` be the best-effort fallback. Finalizers (`new(x, finalizer)`)
+  are not deterministic (Status).
+- **A type with `=destroy` must say what a copy does.** Without `=copy` the compiler copies the
+  fields bit by bit, so two values free the same memory: a double free the first time anyone
+  passes the value to a non-`sink` parameter or adds it to a `seq`. Choose one:
+  - `=copy {.error.}` when the type owns something unique (a file, a socket, a lock) or a copy
+    would be a hidden allocation on a hot path. `=dup` then becomes unavailable as well; it needs no
+    hook of its own.
+  - a deep `=copy` that allocates and copies, when the type is a general container whose users
+    expect value semantics, as `seq` does.
 
 ```nim
 import std/[oserrors, posix]
@@ -291,7 +299,15 @@ When you do climb, these hold:
    what it expands to in words, which names it injects, and how often each argument is evaluated,
    plus `runnableExamples`. Do not generate the public API with macros: it cannot be found by
    reading or documented (Status). Avoid macros that write macros (Google's Lisp guide).
-8. **Test the behaviour and the misuse.** Test what the expansion does, as you would a proc. Test
+8. **Say what control flow does inside a body.** A body parameter placed inside the template's
+   own `while` or `for` captures the caller's `break` and `continue`: they leave your loop, not
+   theirs, and nothing warns. `return` leaves the caller's proc. State in the doc comment which of
+   these work. If `break` must reach the caller's loop, use a loop variable instead of a loop
+   around the body.
+9. **Keep helpers private.** The proc that an expansion calls (rule 4) can stay unexported:
+   templates and `genAst`/`quote` bind the symbols visible where they are defined. Exporting it
+   would only add to the caller's namespace. Test the expansion from another module to be sure.
+10. **Test the behaviour and the misuse.** Test what the expansion does, as you would a proc. Test
    rejected input with `doAssert not compiles(...)`. To see an expansion, use `expandMacros` or
    `echo result.repr` while writing the macro, and remove it before you hand the code back.
 
@@ -361,6 +377,11 @@ macro expect*(cond: untyped): untyped =
   escapes. The annotation exposes the usual leaks; handle them where they occur:
   - `t[key]` on a `Table` raises `KeyError`: use `t.getOrDefault(key)` after `key in t`.
   - `parseInt` and other parsers raise `ValueError`: catch it and convert, as in the example below.
+- **`raises` lists `CatchableError`s only.** `Defect`s (`IndexDefect`, `AssertionDefect`,
+  `OverflowDefect`, …) are not tracked: a proc marked `{.raises: [].}` may still raise one, and
+  listing one only earns the hint "cannot raise" (`XCannotRaiseY`). Name the Defects a proc raises
+  on misuse in its `##` comment. Templates and macros have no effects of their own and take no
+  `raises`: their expansion is checked against the routine that calls them.
 - **Never swallow an error (BN-01).** An `except` whose body is only `discard` hides failures.
   Propagate it, convert it to a value, or log what failed and why. Catch the narrowest type.
 - **Never `except Exception:`** — it also catches `Defect`s, which are bugs. The compiler warns
@@ -451,6 +472,9 @@ doAssert squares(3) == @[0, 1, 4]
   for FFI, a measured hot path, or what safe code cannot express. Keep each use in a small proc with
   a safe signature and a comment saying why it is sound.
 - Prefer `openArray`, `toOpenArray(s, a, b)` and slices to pointer arithmetic.
+- `addr s[i]` on a `seq` or `string` is valid only until the next operation that may reallocate
+  it: `add`, `setLen`, `insert`, `delete`, or a move of the whole value. Hold the index instead,
+  or finish with the pointer before you change the length.
 - Turn a check off only around measured hot code, locally, with the measurement in a comment.
 - FFI: `importc` with a `header`, C types (`cint`, `csize_t`, `cstring`), and a Nim wrapper that
   converts at the boundary. A `cstring` does not own its bytes: keep the Nim `string` alive while
@@ -459,6 +483,12 @@ doAssert squares(3) == @[0, 1, 4]
   a raised error. Callbacks passed to C are `{.cdecl, raises: [].}`: an exception must not unwind
   through C frames.
 - Use `distinct` for handles from C so they cannot be mixed up.
+- Memory you own directly: allocate in one constructor
+  (`cast[ptr UncheckedArray[T]](alloc0(n * sizeof(T)))`, with the comment), free it in `=destroy`,
+  and decide copies as in section 3. `UncheckedArray` has no bounds checks, so every exported
+  accessor checks the index against the length itself and raises `IndexDefect` (an `if`, not
+  `doAssert`, so that `-d:danger` keeps it). Use `allocShared0`/`deallocShared` only if the memory
+  crosses threads.
 
 ```nim
 proc cStrlen(s: cstring): csize_t {.importc: "strlen", header: "<string.h>".}
@@ -522,6 +552,13 @@ func firstOf*(xs: openArray[int]; parity: Parity): Option[int] {.raises: [].} =
   not touch the clock, the network or the disk unless they mean to.
 - Fuzz parsers of untrusted input; run tests under sanitizers
   (`-d:useMalloc --passC:-fsanitize=address --passL:-fsanitize=address --debugger:native`).
+  Where the sanitizer cannot run, test memory ownership two other ways: build with `-d:useMalloc`
+  so the platform allocator aborts on a double free (on macOS, also run with `MallocScribble=1`).
+  Then, with the default allocator, compare `getOccupiedMem()` before and after a loop of
+  create, move and destroy, which shows a leak.
+- Test what must not compile. `doAssert not compiles(expr)` works for type errors and a macro's
+  `error`, but not for a forbidden copy: `=copy {.error.}` is reported after `compiles` has
+  answered. Put the copy in its own file and expect `nim c` to fail.
 - `runnableExamples` are tests too.
 
 ## 12. Performance, in order
