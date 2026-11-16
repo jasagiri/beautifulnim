@@ -66,7 +66,7 @@ order they appear. The Google guide: "Only evaluate parameters to a macro once",
 A Nim template is the same, typed parameters included: it pastes the argument's tree at each use.
 The fix is Lisp's `once-only` written by hand, `let v = x`, in parameter order. A `let` in a
 template is hygienic, so no gensym is needed. beautifulnim reports a template parameter used more
-than once (BN-10). It counts the widest branch of `if`/`case`/`when` rather than the sum. It ignores
+than once (BN-10). For `if`/`case`/`when` it counts the costliest path: one branch plus the `if` conditions tested before it. It ignores
 uses inside `typeof`, `compiles`, `astToStr` and `runnableExamples`, and names that the template
 itself declares.
 

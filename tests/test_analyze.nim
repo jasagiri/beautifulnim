@@ -10,6 +10,12 @@ proc rulesOf(src: string): seq[RuleId] =
 
 proc reports(src: string; rule: RuleId): bool = rule in rulesOf(src)
 
+proc reportedAt(src: string; rule: RuleId; line, col: int): bool =
+  ## Whether `rule` is reported at exactly that place (1-based), e.g. on one parameter.
+  for f in analyze(src).findings:
+    if f.rule == rule and f.line == line and f.col == col: return true
+  false
+
 suite "BN-01 empty except":
   test "Given a bare except with only discard, when analyzed, then BN-01 is reported":
     check reports("try:\n  echo 1\nexcept:\n  discard\n", bn01EmptyExcept)
@@ -113,6 +119,12 @@ suite "BN-10 template argument used more than once":
     check not reports("template sq(x: int): int =\n  let v = x\n  v * v\n", bn10RepeatedTemplateArg)
   test "Given an argument used once in each branch of an if, when analyzed, then BN-10 is not reported":
     check not reports("template t(c: bool; x: int): int =\n  if c: x + 1 else: x - 1\n", bn10RepeatedTemplateArg)
+  test "Given an argument tested in an if and an elif condition and returned in else, when analyzed, then BN-10 is reported":
+    check reportedAt("template clamp(x, lo, hi: int): int =\n  if x < lo: lo elif x > hi: hi else: x\n", bn10RepeatedTemplateArg, 1, 16)
+  test "Given an argument used once in the case selector and once per branch, when analyzed, then BN-10 is reported":
+    check reportedAt("template t(x: int): int =\n  case x\n  of 0: x\n  else: 1\n", bn10RepeatedTemplateArg, 1, 12)
+  test "Given an argument used once in each of an if's later branches only, when analyzed, then BN-10 is not reported":
+    check not reports("template t(c, d: bool; x: int): int =\n  if c: x elif d: x + 1 else: 0\n", bn10RepeatedTemplateArg)
   test "Given an argument used again inside astToStr and typeof, when analyzed, then BN-10 is not reported":
     check not reports("template check(c: bool) =\n  var t: typeof(c)\n  if not c: echo astToStr(c)\n", bn10RepeatedTemplateArg)
   test "Given a parameter that names a variable the template declares, when analyzed, then BN-10 is not reported":

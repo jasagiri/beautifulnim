@@ -145,13 +145,20 @@ proc uses(n: PNode; name: string): int =
     for branch in n:
       if branch.len > 0: widest = max(widest, uses(branch[^1], name))
     widest
-  of nkIfStmt, nkIfExpr, nkCaseStmt:
-    var first = 0
+  of nkIfStmt, nkIfExpr:
+    # reaching a branch evaluates the conditions of every branch before it
+    var before = 0
     var widest = 0
-    for i, son in n:
-      if n.kind == nkCaseStmt and i == 0: first = uses(son, name)
-      else: widest = max(widest, uses(son, name))
-    first + widest
+    for branch in n:
+      widest = max(widest, before + uses(branch, name))
+      if branch.kind in {nkElifBranch, nkElifExpr}: before += uses(branch[0], name)
+    widest
+  of nkCaseStmt:
+    # the selector runs once; `of` values are constants
+    var widest = 0
+    for i in 1 ..< n.len:
+      if n[i].len > 0: widest = max(widest, uses(n[i][^1], name))
+    uses(n[0], name) + widest
   else:
     var total = 0
     for son in n: total += uses(son, name)
