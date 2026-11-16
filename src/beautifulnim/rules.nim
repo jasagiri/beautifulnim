@@ -79,7 +79,7 @@ const Rules*: array[RuleId, Rule] = [
     title: "a template uses an argument more than once, so the argument is evaluated more than once",
     level: lvWarning,
     section: "4. Types and API design / Templates and macros",
-    fix: "bind the argument once (let v = x) and use v; a template pastes the argument, not its value"),
+    fix: "make it a proc if it can be one; otherwise bind the argument once (let v = x) and use v, since a template pastes the argument, not its value"),
 ]
 
 proc parseLevel*(s: string): Level {.raises: [ValueError].} =

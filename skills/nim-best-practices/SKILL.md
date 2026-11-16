@@ -63,7 +63,9 @@ reported by `beautifulnim check` (the CLI in this repository); rules the compile
 
 - **Value semantics by default.** `object`, `seq`, `string` and tuples copy on assignment; the
   compiler turns the last use of a value into a move. Write code that lets it: do not read a
-  variable again after passing it to a `sink` parameter.
+  variable again after passing it to a `sink` parameter. This applies to locals inside a routine
+  only. A module-level `var` is never moved implicitly, because other code may still read it:
+  write `move(x)`, or put the code in a `proc main()`.
 - **Parameter modes say ownership.** Plain `T` for reading (the compiler passes large values by
   reference anyway), `sink T` when the callee stores or consumes the value, `var T` only to mutate
   in place, `lent T` as the return type of a getter that hands out a view of a field. Return several
@@ -74,8 +76,9 @@ reported by `beautifulnim check` (the CLI in this repository); rules the compile
   gives the plain name to the variety used most; the Status guide always suffixes `Ref`; follow the
   project).
 - **Resources get a destructor, not a finalizer.** Write `=destroy`, decide what a copy means, and
-  reset in `=wasMoved`. Destructors must not fail or raise; give the type an explicit `close` that
-  reports errors, and let `=destroy` be the best-effort fallback. Finalizers (`new(x, finalizer)`)
+  reset in `=wasMoved`. Destructors must not fail or raise. When releasing can fail (a file, a
+  socket), give the type an explicit `close` that reports errors, and let `=destroy` be the
+  best-effort fallback; memory alone needs no `close`. Finalizers (`new(x, finalizer)`)
   are not deterministic (Status).
 - **A type with `=destroy` must say what a copy does.** Without `=copy` the compiler copies the
   fields bit by bit, so two values free the same memory: a double free the first time anyone
@@ -303,7 +306,10 @@ When you do climb, these hold:
    own `while` or `for` captures the caller's `break` and `continue`: they leave your loop, not
    theirs, and nothing warns. `return` leaves the caller's proc. State in the doc comment which of
    these work. If `break` must reach the caller's loop, use a loop variable instead of a loop
-   around the body.
+   around the body. Do not put statements after the body in the same block either: when the
+   body always ends in `return` or `raise`, the caller gets an `UnreachableCode` warning for code
+   they never wrote. Set a flag before the body instead (`done = true; body`) and clear it in the
+   `except` branch.
 9. **Keep helpers private.** The proc that an expansion calls (rule 4) can stay unexported:
    templates and `genAst`/`quote` bind the symbols visible where they are defined. Exporting it
    would only add to the caller's namespace. Test the expansion from another module to be sure.
@@ -328,7 +334,9 @@ template debug*(msg: string) =
 ```
 
 A macro that needs to see inside its argument checks the argument's shape, evaluates each operand
-once, and builds the result with `genAst`:
+once, and builds the result with `genAst`. The example prints operands with `$`. When the operand
+types are arbitrary, call a helper that falls back to `repr` (`when compiles($x): $x else: repr(x)`),
+so that types without `$` still compile:
 
 ```nim
 import std/[macros, genasts]
