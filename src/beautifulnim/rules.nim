@@ -13,6 +13,9 @@ type
     bn05Naming = "BN-05"
     bn06Include = "BN-06"
     bn07Method = "BN-07"
+    bn08DirtyTemplate = "BN-08"
+    bn09CodeFromString = "BN-09"
+    bn10RepeatedTemplateArg = "BN-10"
 
   Level* = enum
     ## How sure the rule is that the code should change.
@@ -62,6 +65,21 @@ const Rules*: array[RuleId, Rule] = [
     level: lvInfo,
     section: "4. Types and API design",
     fix: "prefer an object variant with case, a proc, or an object of closures, unless the set of types is open"),
+  bn08DirtyTemplate: Rule(
+    title: "a dirty template (hygiene switched off)",
+    level: lvWarning,
+    section: "4. Types and API design / Templates and macros",
+    fix: "keep the template hygienic and mark only the names callers must see with {.inject.}"),
+  bn09CodeFromString: Rule(
+    title: "a macro builds code from a string (parseStmt or parseExpr)",
+    level: lvWarning,
+    section: "4. Types and API design / Templates and macros",
+    fix: "build the tree with genAst or quote, so names stay hygienic and errors point at the caller"),
+  bn10RepeatedTemplateArg: Rule(
+    title: "a template uses an argument more than once, so the argument is evaluated more than once",
+    level: lvWarning,
+    section: "4. Types and API design / Templates and macros",
+    fix: "bind the argument once (let v = x) and use v; a template pastes the argument, not its value"),
 ]
 
 proc parseLevel*(s: string): Level {.raises: [ValueError].} =

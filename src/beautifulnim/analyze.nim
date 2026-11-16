@@ -33,6 +33,11 @@ const
   RoutineDefs = {nkProcDef, nkFuncDef, nkMethodDef, nkIteratorDef, nkTemplateDef,
                  nkMacroDef, nkConverterDef}
   ForeignNamePragmas = ["importc", "importcpp", "importjs", "importobjc", "exportc"]
+  CodeFromString = ["parseStmt", "parseExpr"]
+  ## Calls whose argument is only looked at, never run: a template argument inside them is
+  ## not evaluated again (BN-10).
+  NotEvaluating = ["typeof", "type", "compiles", "declared", "defined", "sizeof", "alignof",
+                   "astToStr", "is", "isnot", "runnableExamples"]
 
 proc isIdent(n: PNode; name: string): bool =
   n.kind == nkIdent and cmpIgnoreStyle(n.ident.s, name) == 0
@@ -89,10 +94,97 @@ proc checkNaming(a: var Analysis; def: PNode) =
       if params[i].kind == nkIdentDefs: count += params[i].len - 2
     if count == 1: a.add(bn05Naming, name, lvInfo)
 
+proc hasPragma(pragmas: PNode; name: string): bool =
+  if pragmas.kind != nkPragma: return false
+  for p in pragmas:
+    if p.isIdent(name): return true
+  false
+
+proc isAnyIdent(n: PNode; names: openArray[string]): bool =
+  for name in names:
+    if n.isIdent(name): return true
+  false
+
+proc declares(n: PNode; name: string): bool =
+  ## Whether `name` is declared (var, let, const, for, a routine or type name) anywhere in `n`;
+  ## a template parameter used that way names a binding, it is not an expression.
+  case n.kind
+  of nkIdentDefs, nkVarTuple:
+    for i in 0 ..< n.len - 2:
+      if nameNode(n[i]).isIdent(name): return true
+  of nkForStmt:
+    for i in 0 ..< n.len - 2:
+      if nameNode(n[i]).isIdent(name): return true
+  of RoutineDefs, nkTypeDef:
+    if nameNode(n[0]).isIdent(name): return true
+  else: discard
+  if n.kind notin {nkNone .. nkNilLit}:
+    for son in n:
+      if declares(son, name): return true
+  false
+
+proc uses(n: PNode; name: string): int =
+  ## How many times the identifier `name` is evaluated in `n` on one run through it: the
+  ## branches of if, when and case count as the largest one, and names that are only looked at
+  ## (field names after a dot, inside typeof or astToStr) do not count.
+  case n.kind
+  of nkIdent: (if n.isIdent(name): 1 else: 0)
+  of nkNone, nkEmpty, nkSym, nkType, nkCharLit .. nkNilLit: 0
+  of nkDotExpr: uses(n[0], name)
+  of nkBindStmt, nkMixinStmt: 0
+  of nkExprColonExpr, nkExprEqExpr: uses(n[1], name)
+  of nkCall, nkCommand, nkInfix, nkPrefix, nkCallStrLit:
+    if n.len > 0 and n[0].isAnyIdent(NotEvaluating): 0
+    else:
+      var total = 0
+      for son in n: total += uses(son, name)
+      total
+  of nkWhenStmt:
+    # the conditions are compile-time constants; only the chosen branch is run
+    var widest = 0
+    for branch in n:
+      if branch.len > 0: widest = max(widest, uses(branch[^1], name))
+    widest
+  of nkIfStmt, nkIfExpr, nkCaseStmt:
+    var first = 0
+    var widest = 0
+    for i, son in n:
+      if n.kind == nkCaseStmt and i == 0: first = uses(son, name)
+      else: widest = max(widest, uses(son, name))
+    first + widest
+  else:
+    var total = 0
+    for son in n: total += uses(son, name)
+    total
+
+proc isRepeatSafe(t: PNode): bool =
+  ## Parameter types whose repeated use evaluates nothing: types, compile-time values, var.
+  t.isIdent("typedesc") or t.kind == nkVarTy or t.kind == nkStaticTy or
+    (t.kind == nkBracketExpr and t.len > 0 and t[0].isAnyIdent(["typedesc", "static"])) or
+    (t.kind == nkCommand and t.len > 0 and t[0].isIdent("static"))
+
+proc checkTemplate(a: var Analysis; def: PNode) =
+  ## BN-08 and BN-10.
+  if hasPragma(def[pragmasPos], "dirty"):
+    a.add(bn08DirtyTemplate, def)
+  let params = def[paramsPos]
+  if params.kind != nkFormalParams: return
+  let body = def[bodyPos]
+  for i in 1 ..< params.len:
+    let defs = params[i]
+    if defs.kind != nkIdentDefs or isRepeatSafe(defs[^2]): continue
+    for j in 0 ..< defs.len - 2:
+      let p = defs[j]
+      if p.kind != nkIdent or declares(body, p.ident.s): continue
+      if uses(body, p.ident.s) > 1:
+        # a caller of a public template cannot see the body; a private one is its author
+        a.add(bn10RepeatedTemplateArg, p, if isExported(def[namePos]): lvWarning else: lvInfo)
+
 proc checkRoutine(a: var Analysis; def: PNode) =
   case def.kind
   of nkConverterDef: a.add(bn03Converter, def)
   of nkMethodDef: a.add(bn07Method, def)
+  of nkTemplateDef: checkTemplate(a, def)
   else: discard
   checkNaming(a, def)
   let params = def[paramsPos]
@@ -127,6 +219,10 @@ proc walk(a: var Analysis; n: PNode) =
   of nkTypeDef: checkTypeDef(a, n)
   of nkPragma: checkPragma(a, n)
   of nkIncludeStmt: a.add(bn06Include, n)
+  of nkCall, nkCommand, nkCallStrLit:
+    if n.len > 0 and n[0].isAnyIdent(CodeFromString): a.add(bn09CodeFromString, n)
+  of nkDotExpr:
+    if n[1].isAnyIdent(CodeFromString): a.add(bn09CodeFromString, n)
   else: discard
   if n.kind notin {nkNone .. nkNilLit}: # leaves have no sons
     for son in n: walk(a, son)

@@ -1,4 +1,4 @@
-## E tests for docs/specification.md: BN-01..BN-07, BN-P1..BN-P3, BN-L1, BN-L3.
+## E tests for docs/specification.md: BN-01..BN-10, BN-P1..BN-P3, BN-L1, BN-L3.
 
 import std/[os, strutils, unittest]
 import beautifulnim/[analyze, rules]
@@ -77,6 +77,54 @@ suite "BN-07 method":
     let a = analyze("type A = ref object of RootObj\nmethod draw(a: A) {.base.} = discard\n")
     check a.findings.len == 1
     check a.findings[0].rule == bn07Method and a.findings[0].level == lvInfo
+
+suite "BN-08 dirty template":
+  test "Given a template marked dirty, when analyzed, then BN-08 is reported":
+    check reports("template t(x: int) {.dirty.} =\n  let y = x\n", bn08DirtyTemplate)
+  test "Given a template that injects one name, when analyzed, then BN-08 is not reported":
+    check not reports("template t(x: int) =\n  let y {.inject.} = x\n", bn08DirtyTemplate)
+  test "Given a proc marked dirty in a comment, when analyzed, then BN-08 is not reported":
+    check not reports("proc p() = discard # {.dirty.}\n", bn08DirtyTemplate)
+
+suite "BN-09 code built from a string":
+  test "Given parseStmt on a string in a macro, when analyzed, then BN-09 is reported":
+    check reports("macro m(): untyped =\n  parseStmt(\"echo 1\")\n", bn09CodeFromString)
+  test "Given parseExpr as a method call, when analyzed, then BN-09 is reported":
+    check reports("macro m(): untyped =\n  result = \"1 + 1\".parseExpr\n", bn09CodeFromString)
+  test "Given a qualified macros.parseStmt call, when analyzed, then BN-09 is reported once":
+    let a = analyze("macro m(): untyped =\n  macros.parseStmt(\"echo 1\")\n")
+    check a.findings.len == 1 and a.findings[0].rule == bn09CodeFromString
+  test "Given a macro built with quote, when analyzed, then BN-09 is not reported":
+    check not reports("macro m(): untyped =\n  quote do:\n    echo 1\n", bn09CodeFromString)
+
+suite "BN-10 template argument used more than once":
+  test "Given a public template that uses an untyped argument twice, when analyzed, then BN-10 is reported as a warning":
+    let a = analyze("template sq*(x: untyped): untyped = x * x\n")
+    check a.findings.len == 1
+    check a.findings[0].rule == bn10RepeatedTemplateArg and a.findings[0].level == lvWarning
+  test "Given a private template that uses an argument twice, when analyzed, then BN-10 is reported as info":
+    let a = analyze("template sq(x: untyped): untyped = x * x\n")
+    check a.findings.len == 1 and a.findings[0].level == lvInfo
+  test "Given an argument used in two when conditions and once in the chosen branch, when analyzed, then BN-10 is not reported":
+    check not reports("template t(c: int; x: int): int =\n  when c == 1: x\n  elif c == 2: x + 1\n  else: 0\n", bn10RepeatedTemplateArg)
+  test "Given a template that uses a typed argument twice, when analyzed, then BN-10 is reported":
+    check reports("template sq(x: int): int = x * x\n", bn10RepeatedTemplateArg)
+  test "Given a template that binds the argument once with let, when analyzed, then BN-10 is not reported":
+    check not reports("template sq(x: int): int =\n  let v = x\n  v * v\n", bn10RepeatedTemplateArg)
+  test "Given an argument used once in each branch of an if, when analyzed, then BN-10 is not reported":
+    check not reports("template t(c: bool; x: int): int =\n  if c: x + 1 else: x - 1\n", bn10RepeatedTemplateArg)
+  test "Given an argument used again inside astToStr and typeof, when analyzed, then BN-10 is not reported":
+    check not reports("template check(c: bool) =\n  var t: typeof(c)\n  if not c: echo astToStr(c)\n", bn10RepeatedTemplateArg)
+  test "Given a parameter that names a variable the template declares, when analyzed, then BN-10 is not reported":
+    check not reports("template withX(x, body: untyped) =\n  var x = 0\n  inc x\n  body\n", bn10RepeatedTemplateArg)
+  test "Given an argument named again in runnableExamples, when analyzed, then BN-10 is not reported":
+    check not reports("template t*(x: int): int =\n  runnableExamples:\n    doAssert t(1) == 1\n    echo x\n  x\n", bn10RepeatedTemplateArg)
+  test "Given a typedesc parameter used twice, when analyzed, then BN-10 is not reported":
+    check not reports("template z(T: typedesc): untyped = (default(T), default(T))\n", bn10RepeatedTemplateArg)
+  test "Given an argument name used as a field after a dot, when analyzed, then only real uses count":
+    check not reports("template f(o, x: untyped): untyped = o.x + x\n", bn10RepeatedTemplateArg)
+  test "Given a proc that uses its parameter twice, when analyzed, then BN-10 is not reported":
+    check not reports("proc sq(x: int): int = x * x\n", bn10RepeatedTemplateArg)
 
 suite "finding contents":
   test "Given a violation on line 3 column 1, when analyzed, then the finding carries that place and the rule text":

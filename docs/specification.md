@@ -16,6 +16,9 @@ matches a rule (ADR-BNIM-0001). What the compiler already reports (`object of Ex
 | BN-05 | a type name starting lowercase; a routine name starting uppercase or containing `_`; a type name containing `_`; a public routine `getFoo` with one parameter and a return type (level info) | declarations with `importc`, `importcpp`, `importjs` or `exportc` (they keep the foreign name); operators and backticked names |
 | BN-06 | every `include` statement | — |
 | BN-07 | every `method` definition (level info) | — |
+| BN-08 | a `template` with the `{.dirty.}` pragma | templates that mark single names `{.inject.}` |
+| BN-09 | a call of `parseStmt` or `parseExpr`, plain, qualified (`macros.parseStmt`) or as a method call (`"…".parseExpr`), reported once | trees built with `quote` or `genAst` |
+| BN-10 | a template parameter evaluated more than once in one run through the body: level warning on a public template, info on a private one | parameters of type `typedesc`, `static[T]` or `var T`; a parameter the body declares as a name (`var x`); uses in different branches of `if`/`case`/`when` (the widest branch counts; `when` conditions do not); uses inside `typeof`, `type`, `compiles`, `declared`, `defined`, `sizeof`, `alignof`, `astToStr`, `is`, `isnot`, `runnableExamples`, `bind`, `mixin`; a name after a dot or before `:`/`=` in a constructor or named argument; procs |
 
 Each finding carries the rule ID, level, 1-based line and column of the node, the rule's title,
 the fix and the guide section.

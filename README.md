@@ -39,6 +39,9 @@ comments never matches (docs/adr/ADR-BNIM-0001). Exit status: 0 nothing to repor
 | BN-05 | NEP1 naming (a public `getFoo` getter is info) | warning |
 | BN-06 | `include` | warning |
 | BN-07 | `method` | info |
+| BN-08 | a `{.dirty.}` template (hygiene off) | warning |
+| BN-09 | code built from a string with `parseStmt`/`parseExpr` | warning |
+| BN-10 | a template argument evaluated more than once (info on private templates) | warning |
 
 `object of Exception` is not repeated: the compiler reports it (`InheritFromException`), and
 `lints/nim.cfg` makes that an error. Everything else in the guide (ownership, `ref` only with a
@@ -76,9 +79,11 @@ findings at warning or above; ```` ```nim bad ```` blocks show mistakes and only
 | Source | Version read | Licence | Used for |
 |---|---|---|---|
 | [NEP1](https://nim-lang.org/docs/nep1.html) | Nim 2.4.2 docs | none on the page (Nim repository: MIT) | naming, layout |
-| [Nim manual](https://nim-lang.org/docs/manual.html) | Nim 2.4.2 docs | none on the page (Nim repository: MIT) | effects, types, exceptions |
+| [Nim manual](https://nim-lang.org/docs/manual.html) | Nim 2.4.2 docs | none on the page (Nim repository: MIT) | effects, types, exceptions, templates, macros |
 | [Destructors and move semantics](https://nim-lang.org/docs/destructors.html) | Nim 2.4.2 docs | none on the page (Nim repository: MIT) | ownership, hooks |
 | [Status Nim style guide](https://status-im.github.io/nim-style-guide/) | read 2026-11-17 | none found | production practices |
+| [On Lisp](https://paulgraham.com/onlisptext.html), Paul Graham | author's digital edition, ch. 8 and 10 | © the author, free digital edition; short quotes only | when a macro is justified, evaluation count and order |
+| [Google Common Lisp Style Guide](https://google.github.io/styleguide/lispguide.html) | read 2026-11-17, section Macros | CC-BY 3.0 | hygiene, once-only, call-with style |
 
 The digests in `skills/nim-best-practices/references/` paraphrase and say which chapters were read.
 Where the sources disagree (`result`, constructor naming, the `Ref` suffix), the guide picks one and
