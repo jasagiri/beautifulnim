@@ -1,6 +1,6 @@
 # Package
 version       = "0.1.0"
-author        = "GodsGolemInc"
+author        = "jasagiri"
 description   = "Agent skills for idiomatic Nim, tested compiler settings, and a checker for the rules a parser can decide"
 license       = "Apache-2.0"
 srcDir        = "src"
