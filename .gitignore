@@ -1,0 +1,8 @@
+.DS_Store
+nimcache/
+# compiled tests (no extension)
+/tests/test_*
+!/tests/test_*.nim
+/bin/
+# built by nimble build
+/beautifulnim

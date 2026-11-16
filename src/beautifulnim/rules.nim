@@ -1,0 +1,71 @@
+## The rules beautifulnim checks by machine. Each one points at the section of
+## `skills/nim-best-practices/SKILL.md` that explains it; the rest of that guide is
+## for people and agents to read, because a parser cannot judge it. A rule the compiler
+## already reports (for example `object of Exception`, [InheritFromException]) is not repeated
+## here; `lints/nim.cfg` turns those warnings into errors.
+
+type
+  RuleId* = enum
+    bn01EmptyExcept = "BN-01"
+    bn02PublicBoolParam = "BN-02"
+    bn03Converter = "BN-03"
+    bn04SilencedWarning = "BN-04"
+    bn05Naming = "BN-05"
+    bn06Include = "BN-06"
+    bn07Method = "BN-07"
+
+  Level* = enum
+    ## How sure the rule is that the code should change.
+    lvError = "error"     ## the guide forbids it
+    lvWarning = "warning" ## the guide asks for a reason when it is kept
+    lvInfo = "info"       ## worth a look; often right as it is
+
+  Rule* = object
+    title*: string
+    level*: Level
+    section*: string ## the heading in skills/nim-best-practices/SKILL.md
+    fix*: string
+
+const Rules*: array[RuleId, Rule] = [
+  bn01EmptyExcept: Rule(
+    title: "an except branch that only discards the error",
+    level: lvError,
+    section: "5. Errors",
+    fix: "propagate it, turn it into a value (Option or a result type), or log it with what failed"),
+  bn02PublicBoolParam: Rule(
+    title: "a public routine takes a bool parameter",
+    level: lvWarning,
+    section: "4. Types and API design",
+    fix: "use a two-value enum, or two routines with names that say what each does"),
+  bn03Converter: Rule(
+    title: "a converter",
+    level: lvError,
+    section: "4. Types and API design",
+    fix: "call an explicit conversion proc; converters silently erase the distinction a type draws"),
+  bn04SilencedWarning: Rule(
+    title: "a pragma that turns warnings off",
+    level: lvError,
+    section: "2. Before you hand back code",
+    fix: "fix the cause the warning names; the warning is information"),
+  bn05Naming: Rule(
+    title: "a name that does not follow NEP1",
+    level: lvWarning,
+    section: "4. Types and API design",
+    fix: "types are PascalCase, routines and variables camelCase without underscores, getters are named foo, not getFoo"),
+  bn06Include: Rule(
+    title: "an include statement",
+    level: lvWarning,
+    section: "9. Packages and modules",
+    fix: "import the module; include pastes source and hides where names come from"),
+  bn07Method: Rule(
+    title: "a method (dynamic dispatch)",
+    level: lvInfo,
+    section: "4. Types and API design",
+    fix: "prefer an object variant with case, a proc, or an object of closures, unless the set of types is open"),
+]
+
+proc parseLevel*(s: string): Level {.raises: [ValueError].} =
+  ## "error", "warning" or "info".
+  for l in Level:
+    if $l == s: return l
+  raise newException(ValueError, "level must be one of error, warning, info; got '" & s & "'")

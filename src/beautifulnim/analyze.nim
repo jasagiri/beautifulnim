@@ -1,0 +1,160 @@
+## Checks Nim source against the rules in `rules.nim` (docs/specification.md).
+##
+## The tree comes from Nim's own parser (`compiler/parser.parseString`), so string literals
+## and comments are never mistaken for code (ADR-BNIM-0001). Only the syntax is read:
+## nothing is type-checked, so a rule sees names, not what they resolve to.
+
+import std/strutils
+import compiler/[ast, idents, lineinfos, options, parser]
+import ./rules
+
+const MaxSourceBytes* = 1 shl 20 ## larger input is refused before parsing (BN-P3)
+
+type
+  Finding* = object
+    rule*: RuleId
+    level*: Level
+    line*, col*: int ## 1-based
+    title*, fix*, section*: string
+
+  ParseError* = object
+    line*, col*: int ## 1-based; 0 when the parser gave no place
+    message*: string
+
+  Analysis* = object
+    ok*: bool ## false when the source could not be parsed; findings are then empty
+    findings*: seq[Finding]
+    parseErrors*: seq[ParseError]
+
+  ErrorSink = ref object
+    errors: seq[ParseError]
+
+const
+  RoutineDefs = {nkProcDef, nkFuncDef, nkMethodDef, nkIteratorDef, nkTemplateDef,
+                 nkMacroDef, nkConverterDef}
+  ForeignNamePragmas = ["importc", "importcpp", "importjs", "importobjc", "exportc"]
+
+proc isIdent(n: PNode; name: string): bool =
+  n.kind == nkIdent and cmpIgnoreStyle(n.ident.s, name) == 0
+
+proc add(a: var Analysis; rule: RuleId; n: PNode; level = Rules[rule].level) =
+  let r = Rules[rule]
+  a.findings.add Finding(rule: rule, level: level, line: int(n.info.line), col: int(n.info.col) + 1,
+                         title: r.title, fix: r.fix, section: r.section)
+
+proc nameNode(n: PNode): PNode =
+  ## The identifier inside `name`, `name*`, `name {.p.}` or `name* {.p.}`.
+  case n.kind
+  of nkPostfix: nameNode(n[1])
+  of nkPragmaExpr: nameNode(n[0])
+  else: n
+
+proc isExported(n: PNode): bool =
+  case n.kind
+  of nkPostfix: true
+  of nkPragmaExpr: isExported(n[0])
+  else: false
+
+proc hasForeignName(pragmas: PNode): bool =
+  if pragmas.kind != nkPragma: return false
+  for p in pragmas:
+    let key = if p.kind in {nkExprColonExpr, nkCall}: p[0] else: p
+    for name in ForeignNamePragmas:
+      if key.isIdent(name): return true
+  false
+
+proc onlyDiscards(body: PNode): bool =
+  case body.kind
+  of nkDiscardStmt: true
+  of nkStmtList, nkStmtListExpr: body.len == 1 and onlyDiscards(body[0])
+  else: false
+
+proc isBoolType(t: PNode): bool =
+  t.isIdent("bool") or (t.kind == nkVarTy and t.len == 1 and t[0].isIdent("bool"))
+
+proc checkNaming(a: var Analysis; def: PNode) =
+  ## BN-05 for a routine definition.
+  let name = nameNode(def[namePos])
+  if name.kind != nkIdent or hasForeignName(def[pragmasPos]): return
+  let s = name.ident.s
+  if s.len == 0 or s[0] notin Letters: return # operators
+  if s[0] in UppercaseLetters or '_' in s:
+    a.add(bn05Naming, name)
+    return
+  let params = def[paramsPos]
+  if isExported(def[namePos]) and s.len > 3 and s.startsWith("get") and s[3] in UppercaseLetters and
+      params.kind == nkFormalParams and params[0].kind != nkEmpty:
+    var count = 0
+    for i in 1 ..< params.len:
+      if params[i].kind == nkIdentDefs: count += params[i].len - 2
+    if count == 1: a.add(bn05Naming, name, lvInfo)
+
+proc checkRoutine(a: var Analysis; def: PNode) =
+  case def.kind
+  of nkConverterDef: a.add(bn03Converter, def)
+  of nkMethodDef: a.add(bn07Method, def)
+  else: discard
+  checkNaming(a, def)
+  let params = def[paramsPos]
+  if isExported(def[namePos]) and params.kind == nkFormalParams:
+    for i in 1 ..< params.len:
+      let defs = params[i]
+      if defs.kind == nkIdentDefs and isBoolType(defs[^2]):
+        a.add(bn02PublicBoolParam, defs[0])
+
+proc checkTypeDef(a: var Analysis; def: PNode) =
+  let name = nameNode(def[0])
+  let pragmas = if def[0].kind == nkPragmaExpr: def[0][1] else: newNode(nkEmpty)
+  if name.kind == nkIdent and not hasForeignName(pragmas):
+    let s = name.ident.s
+    if s.len > 0 and (s[0] in LowercaseLetters or '_' in s):
+      a.add(bn05Naming, name)
+
+proc checkPragma(a: var Analysis; pragma: PNode) =
+  for p in pragma:
+    if p.kind != nkExprColonExpr or not p[1].isIdent("off"): continue
+    let key = if p[0].kind == nkBracketExpr: p[0][0] else: p[0]
+    for name in ["warnings", "warning", "hints", "hint"]:
+      if key.isIdent(name):
+        a.add(bn04SilencedWarning, p)
+        break
+
+proc walk(a: var Analysis; n: PNode) =
+  case n.kind
+  of nkExceptBranch:
+    if n.len > 0 and onlyDiscards(n[^1]): a.add(bn01EmptyExcept, n)
+  of RoutineDefs: checkRoutine(a, n)
+  of nkTypeDef: checkTypeDef(a, n)
+  of nkPragma: checkPragma(a, n)
+  of nkIncludeStmt: a.add(bn06Include, n)
+  else: discard
+  if n.kind notin {nkNone .. nkNilLit}: # leaves have no sons
+    for son in n: walk(a, son)
+
+proc parse(source: string; sink: ErrorSink): PNode {.raises: [].} =
+  let conf = newConfigRef()
+  conf.errorMax = high(int) # keep going after the first error so every message is collected
+  conf.m.errorOutputs = {} # messages reach `sink` through the structured hook, not the console
+  conf.structuredErrorHook = proc (config: ConfigRef; info: TLineInfo; msg: string;
+                                   level: Severity) {.closure, gcsafe.} =
+    if level == Severity.Error:
+      sink.errors.add ParseError(line: int(info.line), col: int(info.col) + 1, message: msg)
+  try:
+    parseString(source, newIdentCache(), conf)
+  except Exception as e:
+    # The compiler's modules carry no raises annotations, so the call is inferred to raise
+    # Exception. Whatever it raises is reported as a parse error, not dropped.
+    sink.errors.add ParseError(message: "the parser failed: " & e.msg)
+    nil
+
+proc analyze*(source: string): Analysis {.raises: [].} =
+  ## Parses `source` and returns every finding, or the parse errors when it does not parse.
+  if source.len > MaxSourceBytes:
+    return Analysis(ok: false, parseErrors: @[ParseError(
+      message: "source is " & $source.len & " bytes, over MaxSourceBytes (" & $MaxSourceBytes & ")")])
+  let sink = ErrorSink()
+  let tree = parse(source, sink)
+  if tree.isNil or sink.errors.len > 0:
+    return Analysis(ok: false, parseErrors: sink.errors)
+  result = Analysis(ok: true)
+  walk(result, tree)
