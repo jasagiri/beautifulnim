@@ -42,7 +42,7 @@ the fix and the guide section.
 
 | ID | Checks |
 |---|---|
-| BN-X1 | every ```` ```nim ```` block in `skills/*/SKILL.md` passes `nim check` on its own |
+| BN-X1 | every ```` ```nim ```` block in `skills/*/SKILL.md` passes `nim check` on its own under `lints/nim.cfg`, and `nim doc` when it has `runnableExamples` |
 | BN-X2 | every ```` ```nim ```` block has no beautifulnim findings at level warning or above |
 | BN-X3 | every ```` ```nim bad ```` block parses (it shows a mistake, so it may fail `nim check`) |
 

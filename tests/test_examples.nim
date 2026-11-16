@@ -40,7 +40,7 @@ suite "BN-X guide examples":
     check good >= 5
     check bad >= 1
 
-  test "BN-X1 Given each nim example, when checked under lints/nim.cfg, then nim check passes":
+  test "BN-X1 Given each nim example, when checked under lints/nim.cfg, then nim check (and nim doc for runnableExamples) passes":
     for e in all:
       if e.bad: continue
       removeDir(work)
@@ -50,6 +50,11 @@ suite "BN-X guide examples":
       let (output, code) = execCmdEx("nim check --hints:off example.nim", workingDir = work)
       if code != 0: echo "  ", e.file, ":", e.line, "\n", output
       check code == 0
+      if "runnableExamples" in e.code:
+        let (docOut, docCode) = execCmdEx("nim doc --hints:off -o:example.html example.nim",
+                                          workingDir = work)
+        if docCode != 0: echo "  nim doc ", e.file, ":", e.line, "\n", docOut
+        check docCode == 0
     removeDir(work)
 
   test "BN-X2 Given each nim example, when analyzed, then nothing at level warning or above is reported":

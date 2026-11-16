@@ -37,6 +37,16 @@ reported by `beautifulnim check` (the CLI in this repository); rules the compile
 
 - Run `nim check` on what you changed, the project's tests (`nimble test` or its own task), and
   `beautifulnim check --min-level:warning <files>`. Fix every warning you introduced.
+- How to run them on a single file outside a project:
+  - Put a copy of `lints/nim.cfg` named `nim.cfg` next to the file, then `nim check file.nim`.
+    Nim reads `nim.cfg` from the file's directory and its parents; there is no option to load a
+    configuration file from elsewhere.
+  - The file name is the module name, so it must be a Nim identifier (`kv_config.nim`, not
+    `kv-config.nim`). Otherwise check a copy under a valid name and say so in your report.
+  - If the code has `runnableExamples`, also run `nim doc file.nim`: only `nim doc` compiles and
+    runs them (section 10).
+  - `beautifulnim check` prints nothing and exits 0 when it finds nothing; add `--format:json` to
+    see each file it parsed.
 - Use `lints/nim.cfg` (copy the lines into the project's `nim.cfg`): `--styleCheck:usages`,
   `--styleCheck:error`, and the warnings that point at real bugs as errors (`InheritFromException`,
   `UnusedImport`, `StdPrefix`, `CStringConv`, `EnumConv`, `HoleEnumConv`, `UnsafeDefault`,
@@ -251,12 +261,17 @@ if rect.isSome:
 | Situation | Use |
 |---|---|
 | A value may legitimately be absent | `Option[T]` |
+| A value is present but invalid (a stored `"abc"` read as an integer) | raise; keep `Option` for absence only |
 | The caller can recover (bad input, I/O, network) | raise a `CatchableError` subtype, or return a result value (the `results` package) if the project uses it |
 | A bug, a broken invariant | `doAssert` / `raiseAssert` (a `Defect`) |
 
-- **Annotate effects on every exported proc**: `{.raises: [].}` when nothing escapes,
-  `{.raises: [IOError, ParseError].}` otherwise. The compiler checks the list, so it is documentation
-  that cannot go stale. Many codebases put `{.push raises: [].}` at the top of each module.
+- **Annotate effects on every exported routine** — `proc`, `func`, `iterator`, `method`, getters
+  included: `{.raises: [].}` when nothing escapes, `{.raises: [IOError, ParseError].}` otherwise.
+  The compiler checks the list, so it is documentation that cannot go stale. Simplest: put
+  `{.push raises: [].}` at the top of the module and add a `raises` list only where an exception
+  escapes. The annotation exposes the usual leaks; handle them where they occur:
+  - `t[key]` on a `Table` raises `KeyError`: use `t.getOrDefault(key)` after `key in t`.
+  - `parseInt` and other parsers raise `ValueError`: catch it and convert, as in the example below.
 - **Never swallow an error (BN-01).** An `except` whose body is only `discard` hides failures.
   Propagate it, convert it to a value, or log what failed and why. Catch the narrowest type.
 - **Never `except Exception:`** — it also catches `Defect`s, which are bugs. The compiler warns
@@ -382,18 +397,30 @@ doAssert byteLen("abc") == 3
 - `##` doc comments on every exported symbol; the first sentence is a one-line summary. A module
   starts with a `##` paragraph saying what it is for.
 - Put examples in `runnableExamples:` blocks; `nim doc` compiles and runs them, so they stay true.
+  A block sees the module's exported symbols but **not the module's imports**: import what the
+  example uses (`std/options`, `std/tables`) inside the block, as below. When `nim doc` fails on an
+  example it prints the whole command; the error is in the lines before it.
+- Fields and enum values take their `##` on the same line, after the declaration.
 - Document what the signature cannot say: preconditions, complexity, ownership, side effects.
   `raises` and `gcsafe` are in the signature already.
 - `#` comments explain why, not what. `TODO:` with an issue link. No change logs in comments.
 
 ```nim
-func clampPercent*(x: int): range[0..100] =
-  ## Clamps `x` to 0..100.
+import std/options
+
+type Parity* = enum
+  pEven ## divisible by two
+  pOdd  ## not divisible by two
+
+func firstOf*(xs: openArray[int]; parity: Parity): Option[int] {.raises: [].} =
+  ## The first number in `xs` with the given parity, if any.
   runnableExamples:
-    doAssert clampPercent(150) == 100
-  if x < 0: 0
-  elif x > 100: 100
-  else: x
+    import std/options # the block does not see the module's imports
+    doAssert firstOf([1, 4, 6], pEven) == some(4)
+    doAssert firstOf([2, 4], pOdd).isNone
+  for x in xs:
+    if (x mod 2 == 0) == (parity == pEven): return some(x)
+  none(int)
 ```
 
 ## 11. Tests

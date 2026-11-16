@@ -26,17 +26,22 @@ report it, that one says what good looks like.
 ## 2. Run the tools first
 
 1. `nim check` on the files with the project's `nim.cfg`, then again with the lines of
-   `lints/nim.cfg` added. Every error is a finding.
+   `lints/nim.cfg` added. Every error is a finding. For a loose file, or a file whose name is not a
+   Nim identifier, follow nim-best-practices section 2 (copy, `nim.cfg` next to it, `nim doc` when
+   it has `runnableExamples`) and say in the summary which copy you checked.
 2. `beautifulnim check --min-level:warning <files>` (the CLI in this repository). Each BN finding
    is a candidate; confirm it in context before reporting it.
 3. The project's tests. A failing test is the first finding.
 
-Report what the tools found as tool findings; do not re-derive them by reading.
+Report what the tools found as tool findings; do not re-derive them by reading. The tools miss
+most correctness bugs: findings from reading go into the same tiers, and the summary says which
+findings the tools caught and which came from reading.
 
 ## 3. Read, in this order
 
 1. **Correctness and memory safety** — unchecked `Option.get`, object-variant fields read under the
-   wrong `kind`, integer and range conversions from untrusted input, `cast`/`ptr`/`addr` without a
+   wrong `kind`, a collection changed while it is iterated (`del` inside `for … in t`), integer and
+   range conversions from untrusted input, `cast`/`ptr`/`addr` without a
    soundness argument, a `cstring` outliving its `string`, missing `=destroy` or double ownership,
    `{.cast(gcsafe).}` hiding a data race, shared state without a lock.
 2. **Error handling** — `except` that only discards (BN-01), `except Exception:`, exported procs
@@ -72,10 +77,13 @@ Report what the tools found as tool findings; do not re-derive them by reading.
 - <specific things worth keeping, with file:line>
 ```
 
-- **Must fix**: wrong results, crashes, memory or thread unsafety, swallowed errors, security.
+- **Must fix**: wrong results, any `Defect` (crash) reachable from valid input or valid state, memory
+  or thread unsafety, swallowed errors, security.
 - **Should fix**: API and error-handling rules that will cost callers later.
 - **Consider**: idiom and style; at most a handful, grouped by kind rather than repeated per line.
-- Every finding has a place, a rule and a fix. Do not report taste without a rule.
+- Every finding has a place, a rule and a fix. The rule is a BN ID or the closest section of
+  nim-best-practices; when no section covers it, write `Rule: none in the guide` and state the
+  mechanism (what fails, under which input). Do not report taste without a rule.
 - "What is already good" is required; it tells the author what not to change.
 
 ## 5. Offer the configuration
