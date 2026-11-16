@@ -1,7 +1,7 @@
 ---
 name: nim-best-practices
 description: >-
-  Write, review, refactor, debug or explain Nim code the way experienced Nim programmers do.
+  Write, review, refactor or explain Nim code the way experienced Nim programmers do.
   Use whenever the task touches Nim: .nim, .nims or .nimble files, nimble, nim c / nim check,
   ARC/ORC, destructors and move semantics, sink/lent, raises and other effects, distinct types,
   object variants, Option, templates and macros, async, threads, FFI with importc — even when
