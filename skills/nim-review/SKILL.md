@@ -31,7 +31,11 @@ report it, that one says what good looks like.
    it has `runnableExamples`) and say in the summary which copy you checked.
 2. `beautifulnim check --min-level:warning <files>` (the CLI in this repository). Each BN finding
    is a candidate; confirm it in context before reporting it.
-3. The project's tests. A failing test is the first finding.
+3. The project's tests. A failing test is the first finding. If there are none, say so in the
+   summary and name the behaviour a test should pin down.
+
+Probes go through the public API. To reach private state, probe a copy of the module with the
+probe under `when isMainModule:` at its end, and say in the summary that you did.
 
 Report what the tools found as tool findings; do not re-derive them by reading. The tools miss
 most correctness bugs: findings from reading go into the same tiers, and the summary says which
@@ -84,6 +88,9 @@ findings the tools caught and which came from reading.
   reading the code is Must fix even when a probe does not reproduce it: such bugs depend on timing
   and the allocator. Say whether you reproduced it.
 - **Should fix**: API and error-handling rules that will cost callers later.
+- A doc comment that promises behaviour the code lacks is Should fix (section 10), Must fix when
+  callers rely on it. When you cannot tell what the author meant, file it under Should fix with
+  the question you need answered, instead of guessing a tier.
 - **Consider**: idiom and style; at most a handful, grouped by kind rather than repeated per line.
 - Every finding has a place, a rule and a fix. The rule is a BN ID or the closest section of
   nim-best-practices; when no section covers it, write `Rule: none in the guide` and state the
@@ -93,6 +100,7 @@ findings the tools caught and which came from reading.
   `cstring` lifetimes in section 8; threads, `{.cast(gcsafe).}` and `asyncCheck` in section 7;
   templates and macros under "Templates and macros" in section 4.
 - "What is already good" is required; it tells the author what not to change.
+- Write the review in the language of the pull request or the project's documentation.
 
 ## 5. Offer the configuration
 

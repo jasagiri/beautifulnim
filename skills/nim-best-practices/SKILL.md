@@ -304,14 +304,18 @@ When you do climb, these hold:
    to transform.
 7. **Make it readable from outside.** Every public template and macro has a `##` comment that says
    what it expands to in words, which names it injects, and how often each argument is evaluated,
-   plus `runnableExamples`. Do not generate the public API with macros: it cannot be found by
+   plus `runnableExamples`: a code block in the routine's body right after the `##` lines, never
+   text inside the comment (written there it is not compiled, and `nim doc` warns about broken
+   links). Do not generate the public API with macros: it cannot be found by
    reading or documented (Status). Avoid macros that write macros (Google's Lisp guide).
 8. **Say what control flow does inside a body.** A body parameter placed inside the template's
    own `while` or `for` captures the caller's `break` and `continue`: they leave your loop, not
    theirs, and nothing warns. `return` leaves the caller's proc. State in the doc comment which of
    these work. If `break` must reach the caller's loop, use a loop variable instead of a loop
    around the body. When repeating the body is the template's purpose (`retry`), the loop stays:
-   document that `break` and `continue` end the template's loop. Do not put statements after the body in the same block either: when the
+   document that `break` and `continue` end the template's loop, and leave it on a flag
+   (`while not done`) rather than a `break` after the body. Do not put statements after the body
+   in the same block either: when the
    body always ends in `return` or `raise`, the caller gets an `UnreachableCode` warning for code
    they never wrote. Set a flag before the body instead (`done = true; body`) and clear it in the
    `except` branch. A warning about the caller's own statements after the template, when the
@@ -462,6 +466,8 @@ doAssert squares(3) == @[0, 1, 4]
   compiler's sake, with a comment saying so.
 - Named constants instead of magic numbers, with a comment on where the value comes from.
 - `echo` is for command-line output; libraries log through `std/logging` or the project's logger.
+  When the specification itself requires a write to stderr, write to `stderr`: the rule is about
+  diagnostics nobody specified.
 - Two-space indent, no tabs; lines up to 80 characters (NEP1; the Status guide uses `nph`, which
   wraps at 88 — follow the project's formatter). Do not align with extra spaces.
 
@@ -481,7 +487,8 @@ doAssert squares(3) == @[0, 1, 4]
   `std/asyncdispatch` futures carry no exception types, so a proc that calls `await`, `waitFor`
   or `asyncCheck` is inferred to raise `Exception`. Handle the failure where the future completes
   (`try`/`except` around `await` inside the async proc), and write `{.raises: [Exception].}` on
-  the synchronous caller with a comment saying why.
+  the synchronous caller with a comment saying why. On an exported proc that annotation is the
+  one section 5 asks for; it compiles, and a narrower list does not.
   CPU-bound work blocks the event loop; give it a thread pool.
 - Libraries do not start threads or run the event loop; they take what they need as parameters.
 
