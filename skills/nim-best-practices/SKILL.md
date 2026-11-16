@@ -232,9 +232,7 @@ if rect.isSome:
 
 - **`func` when there are no side effects** (it is `proc {.noSideEffect.}`); the compiler then
   checks the claim (Status prefers `func`; NEP1 predates it).
-- **proc > template > macro** (NEP1, Status). A template is right for zero-cost wrappers and lazily
-  evaluated arguments; a macro only when a template cannot do it. Do not generate the public API
-  with macros: it cannot be documented or found by reading (Status).
+- **proc > template > macro** (NEP1, Status, the manual). See *Templates and macros* below.
 - **No converters (BN-03).** They make conversions invisible and cause ambiguous overloads; call an
   explicit `toFoo`.
 - **Methods rarely (BN-07).** Dynamic dispatch needs `ref` types and whole-program knowledge.
@@ -244,6 +242,97 @@ if rect.isSome:
   when that is not enough.
 - **Annotate proc types**: `proc (x: int) {.raises: [], gcsafe.}`. Without it the compiler assumes
   the callback may raise `Exception` and touch globals, and that spreads to every caller (Status).
+
+### Templates and macros
+
+A template pastes syntax trees at the call site; a macro is a proc the compiler runs on syntax
+trees. Both are expanded into the caller's code, which is where their power and their bugs come
+from. Lisp has lived with this for decades, and its lessons carry over almost unchanged
+(`references/macros.md` maps them to Nim).
+
+**Use the least powerful tool that works** (the manual's style note): a proc, then a generic
+proc, then a template, then a macro. Speed is not a reason to climb: mark a small proc
+`{.inline.}` instead (Google's Lisp guide: do not use macros for performance). Climb only for what a
+proc cannot do (On Lisp, ch. 8):
+
+- **Control evaluation**: run an argument lazily (only when logging is on), repeatedly (a body in
+  a loop) or never (`astToStr`, `compiles`). A proc evaluates every argument exactly once, first.
+- **Bind names the caller uses**: `withFile(f, …)` declares `f`; `mapIt` provides `it`.
+- **Look inside an argument's syntax** (transformation): only a macro can see that an argument is
+  `a == b` and report both sides. A template cannot take its argument apart.
+- **Compute at compile time** what `const` and a proc called in a `const` cannot.
+
+When you do climb, these hold:
+
+1. **Stay hygienic (BN-08).** Templates are hygienic by default: a `let` or `var` inside one gets a
+   fresh name and cannot clash with the caller's. Keep it that way. A name the caller must see
+   comes in as a parameter or is marked `{.inject.}`, and the doc comment lists it. `{.dirty.}`
+   switches hygiene off for every name in the template; keep it only with a comment saying why.
+   Never read a caller's variable that is not a parameter: On Lisp calls such capture "a source of
+   contagion" and notes that it usually happens by mistake.
+2. **Evaluate each argument once, in order (BN-10).** A template pastes the argument's *tree* at
+   every use, typed parameters included, so `sq(next())` with `x * x` in the body calls `next`
+   twice. Bind each argument with `let` in the order the parameters appear, then use the binding.
+   The exceptions are the arguments the template exists to repeat or skip (a loop body, a lazily
+   built message). Say so in the doc comment, so callers know.
+3. **Build trees, not strings (BN-09).** In a macro, build code with `genAst` (std/genasts) or
+   `quote do`. `parseStmt`/`parseExpr` on assembled text loses hygiene and the caller's line
+   information. It also turns whatever reaches the string into code.
+4. **A macro processes syntax; the work goes in procs.** Keep the expansion small. Have it call
+   an ordinary proc that holds the logic, so that the logic is tested as a proc (Google's Lisp
+   guide calls this "call-with style").
+5. **Check the input's shape and report at the caller.** Before building anything, check the kind
+   of each node (`expectKind`, `expectLen`, or an `if` with `error(msg, node)`). Then a misuse is one
+   clear error on the caller's line, not a confusing one inside the expansion.
+6. **`typed` before `untyped`.** Give a parameter a real type when it is a value: overloads resolve
+   and type errors appear before expansion. Use `untyped` only for a name to bind, a body, or syntax
+   to transform.
+7. **Make it readable from outside.** Every public template and macro has a `##` comment that says
+   what it expands to in words, which names it injects, and how often each argument is evaluated,
+   plus `runnableExamples`. Do not generate the public API with macros: it cannot be found by
+   reading or documented (Status). Avoid macros that write macros (Google's Lisp guide).
+8. **Test the behaviour and the misuse.** Test what the expansion does, as you would a proc. Test
+   rejected input with `doAssert not compiles(...)`. To see an expansion, use `expandMacros` or
+   `echo result.repr` while writing the macro, and remove it before you hand the code back.
+
+```nim bad
+template sq*(x: int): int = x * x # sq(next()) calls next twice (BN-10); a proc would do
+```
+
+```nim
+func sq*(x: int): int {.inline.} = x * x # a proc evaluates x once; inline keeps it fast
+
+const debugLog {.booldefine.} = false
+
+template debug*(msg: string) =
+  ## Writes `msg` to stderr when compiled with `-d:debugLog`. `msg` is evaluated only then,
+  ## so building it costs nothing in a normal build.
+  when debugLog:
+    stderr.writeLine msg
+```
+
+A macro that needs to see inside its argument checks the argument's shape, evaluates each operand
+once, and builds the result with `genAst`:
+
+```nim
+import std/[macros, genasts]
+
+macro expect*(cond: untyped): untyped =
+  ## Like `doAssert`, but a failed comparison shows both operands. Each operand is evaluated once,
+  ## left to right; the names `l` and `r` are hygienic and cannot clash with the caller's.
+  runnableExamples:
+    let a = 2
+    expect a + 1 == 3
+    doAssert not compiles(expect true)
+  if cond.kind != nnkInfix or cond.len != 3:
+    error("expect needs a comparison such as `a == b`", cond)
+  let text = cond.repr
+  result = genAst(op = cond[0], lhs = cond[1], rhs = cond[2], text):
+    let l = lhs
+    let r = rhs
+    if not op(l, r):
+      raiseAssert text & ": left is " & $l & ", right is " & $r
+```
 
 ### Refactoring someone else's code
 
@@ -458,12 +547,17 @@ func firstOf*(xs: openArray[int]; parity: Parity): Option[int] {.raises: [].} =
 - NEP1 names; identifiers spelled as declared.
 - `##` docs with a summary line on every exported symbol; examples in `runnableExamples`.
 - Every `cast`, `ptr`, `addr` and disabled check has a comment saying why it is sound.
+- Templates and macros only where a proc cannot do it; hygienic, each argument evaluated once
+  unless the doc comment says otherwise, trees built with `genAst`/`quote`, misuse reported at the
+  caller's node.
 
 ## References
 
 - `references/nep1.md` — naming, layout and coding conventions of the standard library.
 - `references/nim-manual.md` — effects (`raises`, `gcsafe`, `func`), `distinct`, `ref`/`ptr`,
   methods, converters, exceptions.
+- `references/macros.md` — templates and macros: the manual's rules, and the Lisp lessons (On Lisp,
+  Google's Common Lisp guide) mapped to Nim.
 - `references/destructors.md` — hooks, move semantics, `sink`/`lent`, `cursor`.
 - `references/status-style-guide.md` — production practices (errors, `ref object`, `result`,
   `func`, imports, formatting).

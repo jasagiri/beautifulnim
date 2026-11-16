@@ -5,8 +5,10 @@
   licence; the Nim repository is MIT except where a module says otherwise. Paraphrased.
 - Read: identifiers, distinct types, ref and ptr, nil, mixing GC'd memory with ptr, func, methods,
   converters, the effect system, exception handling, type-bound operators.
-- Not read in full: generics, templates, macros, modules, pragmas (FFI, threads, guards and locks,
-  out-parameters).
+- Also read: templates (typed and untyped parameters, hygiene, `inject`, `gensym`, `dirty`), and
+  the opening of the macros chapter (how a macro is expanded, the style note).
+- Not read in full: generics, the rest of the macros chapter, modules, pragmas (FFI, threads,
+  guards and locks, out-parameters).
 
 ## Identifiers
 
@@ -43,3 +45,17 @@
   procs are assumed to raise nothing. Defects are not tracked.
 - `{.tags.}`/`{.forbids.}` track user-defined effects; `{.noSideEffect.}`; `{.gcsafe.}` means no
   access to globals holding GC'd memory; `{.cast(gcsafe).}` overrides the check.
+
+## Templates and macros
+
+- A template is substitution on syntax trees, done during semantic analysis. Its parameters are
+  `untyped` (no lookup before substitution, so undeclared names may be passed), `typed`,
+  `typedesc`, or ordinary types (which imply `typed`).
+- Templates are hygienic: `var`, `let`, `const` and type names declared in one are `gensym`ed and
+  invisible at the call site. Routines declared in one are `inject`ed. A name passed in as a
+  parameter is injected. `{.dirty.}` turns hygiene off; `inject` and `gensym` then do nothing.
+- A macro is run at compile time on the syntax tree of its arguments. Its result replaces the
+  call and is analysed again, repeatedly while it contains further macro calls. Macros cannot
+  change Nim's syntax.
+- Style note: use the least powerful construct that stays expressive. In order: a proc or
+  iterator, a generic one, a template, a macro.

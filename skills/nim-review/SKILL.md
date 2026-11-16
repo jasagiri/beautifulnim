@@ -50,7 +50,9 @@ findings the tools caught and which came from reading.
 3. **API design** — public `bool` parameters (BN-02), sentinels instead of `Option`, `ref` without a
    reason, `seq` parameters that could be `openArray`, `var` out-parameters instead of returned
    tuples, exported symbols that are not API, converters (BN-03), `method` for a closed set (BN-07),
-   macros generating public procs.
+   macros generating public procs, a template or macro where a proc would do, a template that
+   evaluates an argument more than once (BN-10), dirty templates (BN-08), code built from strings
+   with `parseStmt` (BN-09), macros that accept any input without checking its shape.
 4. **Idiom and clarity** — NEP1 names (BN-05), `result` assigned in every branch instead of an
    expression, `include` (BN-06), imports without `std/`, magic numbers, `string` for binary data,
    warnings switched off (BN-04).
