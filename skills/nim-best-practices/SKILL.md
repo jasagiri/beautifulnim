@@ -503,10 +503,15 @@ doAssert squares(3) == @[0, 1, 4]
   a raised error. Callbacks passed to C are `{.cdecl, raises: [].}`: an exception must not unwind
   through C frames.
 - Use `distinct` for handles from C so they cannot be mixed up.
-- `ptr T` does not index; `ptr UncheckedArray[T]` does.
+- `ptr T` does not index; `ptr UncheckedArray[T]` does. The standard library has no
+  pointer-arithmetic module (there is no `std/ptrmath`), and no cast-free way to turn the result
+  of `alloc0` into an indexable pointer: that one `cast` is the sanctioned form. If you only need
+  a growable buffer, a `seq[T]` needs no unsafe code at all; use raw memory only when the task
+  requires it.
 - Memory you own directly: allocate in one constructor
   (`cast[ptr UncheckedArray[T]](alloc0(n * sizeof(T)))`, with the comment), free it in `=destroy`,
-  and decide copies as in section 3. `UncheckedArray` has no bounds checks, so every exported
+  and decide copies as in section 3. Keep the zero value valid (section 4): `default(T)` holds a
+  `nil` pointer, so `=destroy` frees only when the pointer is not `nil`. `UncheckedArray` has no bounds checks, so every exported
   accessor checks the index against the length itself and raises `IndexDefect` (an `if`, not
   `doAssert`, so that `-d:danger` keeps it). Use `allocShared0`/`deallocShared` only if the memory
   crosses threads.
