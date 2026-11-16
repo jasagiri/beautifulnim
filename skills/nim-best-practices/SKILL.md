@@ -81,8 +81,10 @@ reported by `beautifulnim check` (the CLI in this repository); rules the compile
   best-effort fallback; memory alone needs no `close`. Finalizers (`new(x, finalizer)`)
   are not deterministic (Status).
 - **A type with `=destroy` must say what a copy does.** Without `=copy` the compiler copies the
-  fields bit by bit, so two values free the same memory: a double free the first time anyone
-  passes the value to a non-`sink` parameter or adds it to a `seq`. Choose one:
+  fields bit by bit, so two values free the same memory: a double free the first time a copy is
+  made. Passing the value to a plain parameter only borrows it; a copy happens when a value that
+  is still used afterwards is stored (added to a `seq`, assigned to a variable or a field).
+  Choose one:
   - `=copy {.error.}` when the type owns something unique (a file, a socket, a lock) or a copy
     would be a hidden allocation on a hot path. `=dup` then becomes unavailable as well; it needs no
     hook of its own.
@@ -284,6 +286,8 @@ When you do climb, these hold:
 2. **Evaluate each argument once, in order (BN-10).** A template pastes the argument's *tree* at
    every use, typed parameters included, so `sq(next())` with `x * x` in the body calls `next`
    twice. Bind each argument with `let` in the order the parameters appear, then use the binding.
+   A literal (`nil`, `[]`, `{}`, `0`) has no side effects and may have no type of its own
+   (`let r = nil` does not compile): paste it instead of binding it.
    The exceptions are the arguments the template exists to repeat or skip (a loop body, a lazily
    built message). Say so in the doc comment, so callers know.
 3. **Build trees, not strings (BN-09).** In a macro, build code with `genAst` (std/genasts) or
@@ -306,10 +310,12 @@ When you do climb, these hold:
    own `while` or `for` captures the caller's `break` and `continue`: they leave your loop, not
    theirs, and nothing warns. `return` leaves the caller's proc. State in the doc comment which of
    these work. If `break` must reach the caller's loop, use a loop variable instead of a loop
-   around the body. Do not put statements after the body in the same block either: when the
+   around the body. When repeating the body is the template's purpose (`retry`), the loop stays:
+   document that `break` and `continue` end the template's loop. Do not put statements after the body in the same block either: when the
    body always ends in `return` or `raise`, the caller gets an `UnreachableCode` warning for code
    they never wrote. Set a flag before the body instead (`done = true; body`) and clear it in the
-   `except` branch.
+   `except` branch. A warning about the caller's own statements after the template, when the
+   body always returns, is correct: that code is dead, and it is the caller's to remove.
 9. **Keep helpers private.** The proc that an expansion calls (rule 4) can stay unexported:
    templates and `genAst`/`quote` bind the symbols visible where they are defined. Exporting it
    would only add to the caller's namespace. Test the expansion from another module to be sure.
@@ -465,11 +471,17 @@ doAssert squares(3) == @[0, 1, 4]
   `Isolated[T]` (std/isolation) proves a value has no other references; channels pass ownership.
 - A thread proc must be `gcsafe`: no access to globals holding `string`, `seq`, `ref` or closures.
   Do not silence that with `{.cast(gcsafe).}`; restructure, or explain in a comment why the access
-  is safe and how it is synchronised.
+  is safe and how it is synchronised. The one common exception: a global marked
+  `{.guard: lock.}` is still not GC-safe inside `withLock`, so put `{.cast(gcsafe).}` inside the
+  `withLock` block, around the guarded access only, with a comment naming the lock.
 - Shared state: one `Lock` per invariant, fields marked `{.guard: lock.}` so the compiler enforces
   `withLock`, short critical sections, and no callbacks or I/O while holding a lock.
 - Async: use one runtime per program — `std/asyncdispatch` or `chronos` — and follow the project.
   `await` every future or handle it; `asyncCheck` turns a failure into a crash of the dispatcher.
+  `std/asyncdispatch` futures carry no exception types, so a proc that calls `await`, `waitFor`
+  or `asyncCheck` is inferred to raise `Exception`. Handle the failure where the future completes
+  (`try`/`except` around `await` inside the async proc), and write `{.raises: [Exception].}` on
+  the synchronous caller with a comment saying why.
   CPU-bound work blocks the event loop; give it a thread pool.
 - Libraries do not start threads or run the event loop; they take what they need as parameters.
 
@@ -491,6 +503,7 @@ doAssert squares(3) == @[0, 1, 4]
   a raised error. Callbacks passed to C are `{.cdecl, raises: [].}`: an exception must not unwind
   through C frames.
 - Use `distinct` for handles from C so they cannot be mixed up.
+- `ptr T` does not index; `ptr UncheckedArray[T]` does.
 - Memory you own directly: allocate in one constructor
   (`cast[ptr UncheckedArray[T]](alloc0(n * sizeof(T)))`, with the comment), free it in `=destroy`,
   and decide copies as in section 3. `UncheckedArray` has no bounds checks, so every exported
@@ -524,6 +537,8 @@ doAssert byteLen("abc") == 3
 - `##` doc comments on every exported symbol; the first sentence is a one-line summary. A module
   starts with a `##` paragraph saying what it is for.
 - Put examples in `runnableExamples:` blocks; `nim doc` compiles and runs them, so they stay true.
+  Every public template and macro has one, and so does every exported proc whose use is not
+  obvious from its signature (what it raises, what it does at the edges). Trivial getters need none.
   A block sees the module's exported symbols but **not the module's imports**: import what the
   example uses (`std/options`, `std/tables`) inside the block, as below. When `nim doc` fails on an
   example it prints the whole command; the error is in the lines before it.
@@ -563,7 +578,8 @@ func firstOf*(xs: openArray[int]; parity: Parity): Option[int] {.raises: [].} =
   Where the sanitizer cannot run, test memory ownership two other ways: build with `-d:useMalloc`
   so the platform allocator aborts on a double free (on macOS, also run with `MallocScribble=1`).
   Then, with the default allocator, compare `getOccupiedMem()` before and after a loop of
-  create, move and destroy, which shows a leak.
+  create, move and destroy, at two loop counts (say 2 000 and 20 000). A difference that grows
+  with the count is a leak. A constant one is the runtime's first-use allocation.
 - Test what must not compile. `doAssert not compiles(expr)` works for type errors and a macro's
   `error`, but not for a forbidden copy: `=copy {.error.}` is reported after `compiles` has
   answered. Put the copy in its own file and expect `nim c` to fail.
