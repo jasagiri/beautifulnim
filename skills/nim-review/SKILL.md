@@ -26,7 +26,9 @@ report it, that one says what good looks like.
 ## 2. Run the tools first
 
 1. `nim check` on the files with the project's `nim.cfg`, then again with the lines of
-   `lints/nim.cfg` added. Every error is a finding. For a loose file, or a file whose name is not a
+   `lints/nim.cfg` added (with no project `nim.cfg`, `lints/nim.cfg` alone). When the code defines
+   hooks, also `nim c`: `nim check` does not report a forbidden copy (nim-best-practices
+   section 2). Every error is a finding. For a loose file, or a file whose name is not a
    Nim identifier, follow nim-best-practices section 2 (copy, `nim.cfg` next to it, `nim doc` when
    it has `runnableExamples`) and say in the summary which copy you checked.
 2. `beautifulnim check --min-level:warning <files>` (the CLI in this repository). Each BN finding
@@ -34,7 +36,7 @@ report it, that one says what good looks like.
 3. The project's tests. A failing test is the first finding. If there are none, say so in the
    summary and name the behaviour a test should pin down.
 
-Probes go through the public API. To reach private state, probe a copy of the module with the
+Probes go through the public API and `import` the module. Only to reach private state, probe a copy of the module with the
 probe under `when isMainModule:` at its end, and say in the summary that you did.
 
 Report what the tools found as tool findings; do not re-derive them by reading. The tools miss
@@ -100,7 +102,8 @@ findings the tools caught and which came from reading.
   `cstring` lifetimes in section 8; threads, `{.cast(gcsafe).}` and `asyncCheck` in section 7;
   templates and macros under "Templates and macros" in section 4.
 - "What is already good" is required; it tells the author what not to change.
-- Write the review in the language of the pull request or the project's documentation.
+- Write the review in the language of the pull request or the project's documentation; with
+  neither, in the language of the request.
 
 ## 5. Offer the configuration
 

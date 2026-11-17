@@ -45,6 +45,10 @@ reported by `beautifulnim check` (the CLI in this repository); rules the compile
     `kv-config.nim`). Otherwise check a copy under a valid name and say so in your report.
   - If the code has `runnableExamples`, also run `nim doc file.nim`: only `nim doc` compiles and
     runs them (section 10).
+  - If the code defines hooks (`=destroy`, `=copy`), also run `nim c file.nim`. `nim check` stops
+    before destructor injection, so it exits 0 on a copy that `=copy {.error.}` forbids; only
+    `nim c` reports it. To list where a type is copied, add `=copy {.error.}` for a moment and
+    read the `nim c` errors.
   - `beautifulnim check` prints nothing and exits 0 when it finds nothing; add `--format:json` to
     see each file it parsed.
 - Use `lints/nim.cfg` (copy the lines into the project's `nim.cfg`): `--styleCheck:usages`,
@@ -314,7 +318,9 @@ When you do climb, these hold:
    these work. If `break` must reach the caller's loop, use a loop variable instead of a loop
    around the body. When repeating the body is the template's purpose (`retry`), the loop stays:
    document that `break` and `continue` end the template's loop, and leave it on a flag
-   (`while not done`) rather than a `break` after the body. Do not put statements after the body
+   (`while not done`) rather than a `break` after the body: inside the loop,
+   `try: done = true; body` and `except: done = false` (re-raise on the last attempt), so a body
+   that finishes normally ends the loop and one that raises repeats it. Do not put statements after the body
    in the same block either: when the
    body always ends in `return` or `raise`, the caller gets an `UnreachableCode` warning for code
    they never wrote. Set a flag before the body instead (`done = true; body`) and clear it in the
@@ -552,7 +558,8 @@ doAssert byteLen("abc") == 3
   Every public template and macro has one, and so does every exported proc whose use is not
   obvious from its signature (what it raises, what it does at the edges). Trivial getters need none.
   A block sees the module's exported symbols but **not the module's imports**: import what the
-  example uses (`std/options`, `std/tables`) inside the block, as below. When `nim doc` fails on an
+  example uses (`std/options`, `std/tables`) inside the block, operators included (`in` on
+  strings comes from `std/strutils`), as below. When `nim doc` fails on an
   example it prints the whole command; the error is in the lines before it.
 - Fields and enum values take their `##` on the same line, after the declaration.
 - Document what the signature cannot say: preconditions, complexity, ownership, side effects.
@@ -594,7 +601,7 @@ func firstOf*(xs: openArray[int]; parity: Parity): Option[int] {.raises: [].} =
   with the count is a leak. A constant one is the runtime's first-use allocation.
 - Test what must not compile. `doAssert not compiles(expr)` works for type errors and a macro's
   `error`, but not for a forbidden copy: `=copy {.error.}` is reported after `compiles` has
-  answered. Put the copy in its own file and expect `nim c` to fail.
+  answered (and after `nim check` has finished). Put the copy in its own file and expect `nim c` to fail.
 - `runnableExamples` are tests too.
 
 ## 12. Performance, in order
