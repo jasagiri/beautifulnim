@@ -48,7 +48,9 @@ reported by `beautifulnim check` (the CLI in this repository); rules the compile
   - If the code defines hooks (`=destroy`, `=copy`), also run `nim c file.nim`. `nim check` stops
     before destructor injection, so it exits 0 on a copy that `=copy {.error.}` forbids; only
     `nim c` reports it. To list where a type is copied, add `=copy {.error.}` for a moment and
-    read the `nim c` errors.
+    read the `nim c` errors. Only routines the program calls are checked, and the build stops at
+    the first routine that copies: call every routine from a probe, fix what is reported, and
+    rebuild until it is clean.
   - `beautifulnim check` prints nothing and exits 0 when it finds nothing; add `--format:json` to
     see each file it parsed.
 - Use `lints/nim.cfg` (copy the lines into the project's `nim.cfg`): `--styleCheck:usages`,
@@ -364,7 +366,9 @@ macro expect*(cond: untyped): untyped =
     let a = 2
     expect a + 1 == 3
     doAssert not compiles(expect true)
-  if cond.kind != nnkInfix or cond.len != 3:
+    doAssertRaises(AssertionDefect): expect a == 3
+  const comparisons = ["==", "!=", "<", "<=", ">", ">="]
+  if cond.kind != nnkInfix or cond[0].strVal notin comparisons:
     error("expect needs a comparison such as `a == b`", cond)
   let text = cond.repr
   result = genAst(op = cond[0], lhs = cond[1], rhs = cond[2], text):
@@ -494,7 +498,8 @@ doAssert squares(3) == @[0, 1, 4]
   or `asyncCheck` is inferred to raise `Exception`. Handle the failure where the future completes
   (`try`/`except` around `await` inside the async proc), and write `{.raises: [Exception].}` on
   the synchronous caller with a comment saying why. On an exported proc that annotation is the
-  one section 5 asks for; it compiles, and a narrower list does not.
+  one section 5 asks for, and it is required: the compiler checks it, and a narrower list does
+  not compile.
   CPU-bound work blocks the event loop; give it a thread pool.
 - Libraries do not start threads or run the event loop; they take what they need as parameters.
 
@@ -525,8 +530,9 @@ doAssert squares(3) == @[0, 1, 4]
   (`cast[ptr UncheckedArray[T]](alloc0(n * sizeof(T)))`, with the comment), free it in `=destroy`,
   and decide copies as in section 3. Keep the zero value valid (section 4): `default(T)` holds a
   `nil` pointer, so `=destroy` frees only when the pointer is not `nil`. `UncheckedArray` has no bounds checks, so every exported
-  accessor checks the index against the length itself and raises `IndexDefect` (an `if`, not
-  `doAssert`, so that `-d:danger` keeps it). Use `allocShared0`/`deallocShared` only if the memory
+  accessor checks the index against the length itself and raises `IndexDefect` with an `if`, the
+  same defect built-in indexing raises (`doAssert` would raise `AssertionDefect`; both survive
+  `-d:danger`). Use `allocShared0`/`deallocShared` only if the memory
   crosses threads.
 
 ```nim
@@ -602,7 +608,10 @@ func firstOf*(xs: openArray[int]; parity: Parity): Option[int] {.raises: [].} =
 - Test what must not compile. `doAssert not compiles(expr)` works for type errors and a macro's
   `error`, but not for a forbidden copy: `=copy {.error.}` is reported after `compiles` has
   answered (and after `nim check` has finished). Put the copy in its own file and expect `nim c` to fail.
-- `runnableExamples` are tests too.
+- `runnableExamples` are tests too, and documentation first: a task that asks for no tests
+  still gets them on every public symbol. Show a runtime error with
+  `doAssertRaises(IndexDefect): discard b[9]`; `doAssert not compiles(...)` is only for what
+  must not compile.
 
 ## 12. Performance, in order
 
