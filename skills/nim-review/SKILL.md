@@ -52,7 +52,8 @@ findings the tools caught and which came from reading.
 1. **Correctness and memory safety** — unchecked `Option.get`, object-variant fields read under the
    wrong `kind`, a collection changed while it is iterated (`del` inside `for … in t`;
    the fix collects the keys first, then deletes), integer overflow in sums of amounts from
-   outside (a Defect, so Must fix), integer and
+   outside, meaning any value a caller of a public proc or an external input supplies (a Defect,
+   so Must fix), integer and
    range conversions from untrusted input (the fix: parse, check the bounds, then convert;
    nim-best-practices section 5), `cast`/`ptr`/`addr` without a soundness argument, a `cstring` outliving its `string`, missing `=destroy` or double ownership,
    `{.cast(gcsafe).}` hiding a data race, shared state without a lock.
@@ -101,6 +102,9 @@ findings the tools caught and which came from reading.
   otherwise), not `-d:danger`. When `-d:danger` turns the Defect into a silent wrong result, say
   so in the finding.
 - **Should fix**: API and error-handling rules that will cost callers later.
+- A `raises` list does not track Defects, so `raises: []` on a proc that can hit one is legal:
+  the finding is the reachable Defect, not the annotation. A missing `##` on an exported symbol
+  is Should fix.
 - A doc comment that promises behaviour the code lacks is Should fix (section 10), Must fix when
   callers rely on it. When you cannot tell what the author meant, file it under Should fix with
   the question you need answered, instead of guessing a tier.

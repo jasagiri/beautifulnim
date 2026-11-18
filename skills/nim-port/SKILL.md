@@ -50,7 +50,7 @@ Decide the public types and procs first (guide section 4), then fill them in unt
 | Python `dict` (insertion order) | `OrderedTable` when order is observable, else `Table` |
 | Python `bytes`, JS `Uint8Array` | `seq[byte]` |
 | JS `number` | `int` or `float` chosen per use; check ranges |
-| Python `int` (unbounded) | `int`, with the bound checked before arithmetic can overflow (overflow raises `OverflowDefect`, not the original's error): saturate every accumulator (each number and the running total) just past the bound, or check before multiplying, and keep the original's order of errors |
+| Python `int` (unbounded) | `int`, with the bound checked before arithmetic can overflow (overflow raises `OverflowDefect`, not the original's error): saturate every accumulator (each number and the running total) just past the bound, or check before multiplying, and keep the original's order of errors (for each input, the first error the original raises is the one the port raises; a guard must not make a later error fire first) |
 | Python `str` (code points) | `string` (UTF-8 bytes); `std/unicode` runes where code points matter |
 | Python generator | `iterator`; a closure iterator only when it is stored or passed. Its checks run at the first step, as Python's do at the first `next()` |
 | Go `error` return | raise, or `Opt`/result value; never ignore it |
@@ -71,7 +71,9 @@ Decide the public types and procs first (guide section 4), then fill them in unt
 
 - `nim check` clean with `lints/nim.cfg`, all ported tests green, `beautifulnim check
   --min-level:warning` with nothing to report (or a reason for each).
-- Run both versions on the same inputs where possible and compare outputs byte for byte.
+- Run both versions on the same inputs where possible and compare outputs byte for byte. List
+  the inputs that only one side can take (invalid UTF-8 for a Python `str`, numbers past
+  `int64`), and name the test that covers each.
 
 ## 6. Write PORTING.md
 

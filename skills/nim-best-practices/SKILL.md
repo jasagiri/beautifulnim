@@ -14,7 +14,9 @@ description: >-
 Distilled from four sources (digests in `references/`): NEP1, the Nim manual, the destructors and
 move semantics document (all at Nim 2.4.2), and the Status Nim style guide. Where they disagree,
 this file says which to follow and why. Rules a machine can check carry an ID (BN-01…) and are
-reported by `beautifulnim check` (the CLI in this repository); rules the compiler checks are switched on in `lints/nim.cfg`.
+reported by `beautifulnim check` (the CLI in this repository); rules the compiler checks are
+switched on in `lints/nim.cfg`. This file is about 40 000 characters: if your reader cuts it
+off, read the rest by line range before you start.
 
 ## 1. Mindset
 
@@ -535,7 +537,7 @@ doAssert squares(3) == @[0, 1, 4]
   wrapper raises it again after the C call returns. Give the closure's type its raises list
   (`proc (x, y: int): int {.raises: [CatchableError].}`), even when the task writes the parameter
   type without it: under `{.push raises: [].}` a proc type without one also means `raises: []`,
-  and a closure that raises no longer fits. The call sites the task describes still compile; name
+  and a closure that raises no longer fits. Changing the task's signature this way is allowed: the call sites the task describes still compile; name
   the added list in your notes. Catch `CatchableError` only; a `Defect` is a bug to fix, not an
   error to carry across C. Build such code with `--panics:on`, so a Defect ends the program
   where it happens instead of unwinding through C: pass it on the command line
@@ -551,7 +553,7 @@ doAssert squares(3) == @[0, 1, 4]
   of `alloc0`, or a pointer C hands you, into an indexable pointer: that one `cast` is the
   sanctioned form, and so is reading the value a C callback's `const void*` points to
   (`cast[ptr int](a)[]`). The exception is a NUL-terminated C string: `for c in mitems(s)` on a
-  `var cstring` writes its bytes with no cast. If you only need
+  `var cstring` writes its bytes with no cast (declare the copy with `var`, not `let`). If you only need
   a growable buffer, a `seq[T]` needs no unsafe code at all; use raw memory only when the task
   requires it.
 - Memory you own directly: allocate in one constructor
@@ -642,8 +644,11 @@ func firstOf*(xs: openArray[int]; parity: Parity): Option[int] {.raises: [].} =
   with the count is a leak. A constant one is the runtime's first-use allocation. These ownership
   tests are for code that owns memory (`ptr`, `alloc`, hooks); for code that does not, say so
   and skip them. Memory that C allocates (`strdup`, `malloc`) is invisible to `getOccupiedMem`:
-  on macOS run the probe as `leaks --atExit -- ./probe` and expect `0 leaks`.
-- Outside a project there is no test task: run a test file with `nim c -r tests/tfoo.nim`.
+  on macOS run the probe as `leaks --atExit -- ./probe` and expect `0 leaks`. For code whose only
+  memory is what C allocates, `leaks` replaces the two ownership tests above.
+- Outside a project there is no test task: run a test file with `nim c -r tests/tfoo.nim`; it
+  imports the module by relative path (`import ../foo`). A directory name that is not a Nim
+  identifier goes in quotes: `import "../check-project/foo"`.
 - Test what must not compile. `doAssert not compiles(expr)` works for type errors and a macro's
   `error`, but not for a forbidden copy: `=copy {.error.}` is reported after `compiles` has
   answered (and after `nim check` has finished). Put the copy in its own file and expect `nim c` to fail.
