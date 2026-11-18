@@ -23,7 +23,8 @@ type
     message*: string
 
   TypedAnalysis* = object
-    ok*: bool ## false when the file does not parse or does not compile; findings are then empty
+    ok*: bool ## false when the file cannot be read, does not parse or does not compile; findings are then empty
+    readError*: string ## why the file could not be read; "" when it was read
     findings*: seq[Finding] ## ordered by line, then column
     errors*: seq[CompileError]
 
@@ -104,7 +105,7 @@ proc analyzeTyped*(path: string; stdlib = builtWithStdlib): TypedAnalysis {.rais
   let source =
     try: readFile(path)
     except IOError as e:
-      return TypedAnalysis(ok: false, errors: @[CompileError(file: path, message: "cannot read: " & e.msg)])
+      return TypedAnalysis(ok: false, readError: e.msg)
   let syntactic = analyze(source)
   if not syntactic.ok:
     result = TypedAnalysis(ok: false)

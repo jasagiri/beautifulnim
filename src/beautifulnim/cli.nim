@@ -34,10 +34,21 @@ type Mode = enum
   modeSyntax ## rules on the syntax tree only (ADR-BNIM-0001)
   modeTyped  ## BN-02 on resolved types (ADR-BNIM-0003)
 
-proc findingsOf(path, source: string; mode: Mode; status: var int): (bool, seq[Finding]) =
-  ## The findings, or false after printing why the file could not be checked.
+proc cannotRead(path, why: string; status: var int) =
+  stderr.writeLine path, ": cannot read: ", why
+  status = 2
+
+proc findingsOf(path: string; mode: Mode; status: var int): (bool, seq[Finding]) =
+  ## The findings, or false after printing why the file could not be checked. The file is read
+  ## once: here for the syntax rules, by analyzeTyped (which the compiler's reading must match)
+  ## with --typed.
   case mode
   of modeSyntax:
+    let source =
+      try: readFile(path)
+      except IOError as e:
+        cannotRead(path, e.msg, status)
+        return (false, @[])
     let a = analyze(source)
     if not a.ok:
       for e in a.parseErrors:
@@ -45,8 +56,10 @@ proc findingsOf(path, source: string; mode: Mode; status: var int): (bool, seq[F
       status = 2
     (a.ok, a.findings)
   of modeTyped:
-    let a = analyzeTyped(path) # reads the file itself, as the compiler does
-    if not a.ok:
+    let a = analyzeTyped(path)
+    if a.readError.len > 0:
+      cannotRead(path, a.readError, status)
+    elif not a.ok:
       for e in a.errors:
         stderr.writeLine e.file, ":", e.line, ":", e.col, ": does not compile: ", e.message
       status = 2
@@ -56,13 +69,7 @@ proc check(files: seq[string]; minLevel: Level; format: Format; mode: Mode): int
   var status = 0
   var reports = newJArray()
   for path in files:
-    let source =
-      try: readFile(path)
-      except IOError as e:
-        stderr.writeLine path, ": cannot read: ", e.msg
-        status = 2
-        continue
-    let (ok, findings) = findingsOf(path, source, mode, status)
+    let (ok, findings) = findingsOf(path, mode, status)
     if not ok: continue
     let shown = findings.atOrAbove(minLevel)
     if shown.len > 0 and status == 0: status = 1

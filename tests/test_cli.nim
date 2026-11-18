@@ -58,8 +58,11 @@ suite "BN-C command":
     check code == 2
     check (f & ":2:1: not valid Nim: ") in output
 
-  test "BN-C4 Given a missing file, when checked, then the exit is 2":
-    check run("check " & quoteShell(work / "nope.nim")).code == 2
+  test "BN-C4 Given a missing file, when checked with or without --typed, then cannot read and the exit is 2":
+    for args in ["check ", "check --typed "]:
+      let (output, code) = run(args & quoteShell(work / "nope.nim"))
+      check code == 2
+      check (work / "nope.nim" & ": cannot read: ") in output
 
   test "BN-C5 Given no command, an unknown option or check without files, when run, then usage and exit 2":
     for args in ["", "check", "check --loud x.nim", "frobnicate", "check --min-level:loud x.nim",

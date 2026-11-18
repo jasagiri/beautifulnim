@@ -38,7 +38,7 @@ the fix and the guide section.
 | BN-C1 | `beautifulnim check <files>` | one line per finding, `path:line:col: level: [BN-NN] title; fix`; exit 1 when there are findings, 0 when none |
 | BN-C2 | `--min-level:error\|warning\|info` | only findings at that level or above are printed and counted for the exit status |
 | BN-C3 | `--format:json` | a JSON array of `{"file", "findings": [{"rule", "level", "line", "col", "title", "fix", "section"}]}` |
-| BN-C4 | a file that does not parse, or cannot be read | the parser's messages (or the read error) on stderr as `path:line:col: not valid Nim: …`; exit 2 |
+| BN-C4 | a file that does not parse, or cannot be read (with or without `--typed`) | the parser's messages on stderr as `path:line:col: not valid Nim: …`, or `path: cannot read: …`; exit 2 |
 | BN-C5 | no command, an unknown command or option, a bad level, `check` without files, `--typed` with a value | the usage text; exit 2. `beautifulnim rules` lists every rule; exit 0 |
 | BN-C6 | `check --typed` on a file that parses but does not compile, or imports one that does not | the compiler's errors on stderr as `path:line:col: does not compile: …`, each once (an error in an imported file names that file); exit 2 |
 
@@ -50,7 +50,7 @@ the fix and the guide section.
 | BN-T2 | any file that compiles | every other rule is reported as without `--typed`; BN-02 comes only from BN-T1, so a plain `bool` is reported once; findings ordered by line, then column |
 | BN-T3 | a file with `nim.cfg` or `config.nims` beside it or in a parent directory | they apply as they do for `nim check` (search paths, defines); the standard library is that of the Nim the checker was built with |
 | BN-T4 | a `.nims` file | checked as NimScript, as `nim check foo.nims` does (`switch` and the other NimScript procs resolve) |
-| BN-T5 | `analyzeTyped(path)` with a `stdlib` directory that has no `system.nim` (by default `builtWithStdlib`, so after the Nim that built the checker was removed), or a `path` that cannot be read | `ok` is false, one error naming the directory and asking for a rebuild, or `cannot read: …`; the compiler is not run. The file is read by `analyzeTyped` itself, so the syntax rules and the compiler see the same file (`tests/test_typed.nim`) |
+| BN-T5 | `analyzeTyped(path)` with a `stdlib` directory that has no `system.nim` (by default `builtWithStdlib`, so after the Nim that built the checker was removed), or a `path` that cannot be read | `ok` is false with one error naming the directory and asking for a rebuild, or with `readError` set and no errors; the compiler is not run. The file is read by `analyzeTyped` itself, so the syntax rules and the compiler see the same file (`tests/test_typed.nim`) |
 
 ## Continuous integration (`.github/workflows/test.yml`)
 

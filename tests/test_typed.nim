@@ -27,7 +27,7 @@ suite "BN-T5 standard library":
   test "Given a path with no file, when analyzeTyped runs, then the read error is returned":
     let a = analyzeTyped(work / "missing.nim")
     check not a.ok
-    check a.errors.len == 1
-    check a.errors[0].message.startsWith("cannot read: ")
+    check a.readError.len > 0
+    check a.errors.len == 0
 
   removeDir(work)
