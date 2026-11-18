@@ -44,16 +44,19 @@ reported by `beautifulnim check` (the CLI in this repository); rules the compile
   - The file name is the module name, so it must be a Nim identifier (`kv_config.nim`, not
     `kv-config.nim`). Otherwise check a copy under a valid name and say so in your report.
   - If the code has `runnableExamples`, also run `nim doc file.nim`: only `nim doc` compiles and
-    runs them (section 10).
+    runs them (section 10). `nim doc` exits 0 even on markup errors in `##` comments
+    (`Error: '**' expected` for a bare `**`): read its output for `Error:` and `Warning:` lines.
   - If the code defines hooks (`=destroy`, `=copy`), also run `nim c file.nim`. `nim check` stops
     before destructor injection, so it exits 0 on a copy that `=copy {.error.}` forbids; only
     `nim c` reports it. To list where a type is copied, add `=copy {.error.}` for a moment and
     read the `nim c` errors. Only routines the program calls are checked, and the build stops at
     the first routine that copies: call every routine from a probe, fix what is reported, and
     rebuild until it is clean.
-  - If the code imports C through a `header`, also run `nim c file.nim`. `nim check` does not run
-    the C compiler, and only the C compiler checks the call against the header's prototype (clang
-    rejects a `qsort` comparator that takes `void*` instead of `const void*`).
+  - If the code imports C through a `header`, also build a probe that calls every proc that
+    calls C, with `nim c`. `nim check` does not run the C compiler, and only the C compiler
+    checks the call against the header's prototype (clang rejects a `qsort` comparator that
+    takes `void*` instead of `const void*`). `nim c` on the module alone leaves out the procs
+    nothing calls, so it checks nothing.
   - `beautifulnim check` prints nothing and exits 0 when it finds nothing; add `--format:json` to
     see each file it parsed.
 - Use `lints/nim.cfg` (copy the lines into the project's `nim.cfg`): `--styleCheck:usages`,
@@ -527,8 +530,10 @@ doAssert squares(3) == @[0, 1, 4]
   wrapper raises it again after the C call returns. Give the closure's type its raises list
   (`proc (x, y: int): int {.raises: [CatchableError].}`), even when the task writes the parameter
   type without it: under `{.push raises: [].}` a proc type without one also means `raises: []`,
-  and a closure that raises no longer fits. Catch `CatchableError` only; a `Defect` is a bug to
-  fix, not an error to carry across C. When the C API has
+  and a closure that raises no longer fits. The call sites the task describes still compile; name
+  the added list in your notes. Catch `CatchableError` only; a `Defect` is a bug to fix, not an
+  error to carry across C. Build such code with `--panics:on`, so a Defect ends the program
+  where it happens instead of unwinding through C. When the C API has
   no context argument (`qsort`), keep the context in a `{.threadvar.}`: save the old value, set
   it, call C, then restore the old value, so a nested call from inside the callback works.
 - A C parameter of type `const T*` needs a type that prints as such:
@@ -614,7 +619,9 @@ func firstOf*(xs: openArray[int]; parity: Parity): Option[int] {.raises: [].} =
   ordering) rather than restating constants, and write the failing test before fixing a bug.
 - Inject time, randomness and I/O as parameters (proc types or objects of closures), so tests do
   not touch the clock, the network or the disk unless they mean to.
-- Fuzz parsers of untrusted input; run tests under sanitizers
+- Fuzz parsers of untrusted input: a seeded loop over random byte strings (say 100 000), where
+  every input must give a result or the documented `CatchableError`; any `Defect` fails. Run tests
+  under sanitizers
   (`-d:useMalloc --passC:-fsanitize=address --passL:-fsanitize=address --debugger:native`).
   Where the sanitizer cannot run, test memory ownership two other ways: build with `-d:useMalloc`
   so the platform allocator aborts on a double free (on macOS, also run with `MallocScribble=1`).
@@ -622,7 +629,8 @@ func firstOf*(xs: openArray[int]; parity: Parity): Option[int] {.raises: [].} =
   create, move and destroy, at two loop counts (say 2 000 and 20 000). A difference that grows
   with the count is a leak. A constant one is the runtime's first-use allocation. These ownership
   tests are for code that owns memory (`ptr`, `alloc`, hooks); for code that does not, say so
-  and skip them.
+  and skip them. Memory that C allocates (`strdup`, `malloc`) is invisible to `getOccupiedMem`:
+  on macOS run the probe as `leaks --atExit -- ./probe` and expect `0 leaks`.
 - Outside a project there is no test task: run a test file with `nim c -r tests/tfoo.nim`.
 - Test what must not compile. `doAssert not compiles(expr)` works for type errors and a macro's
   `error`, but not for a forbidden copy: `=copy {.error.}` is reported after `compiles` has

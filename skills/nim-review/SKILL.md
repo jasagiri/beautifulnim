@@ -48,8 +48,8 @@ findings the tools caught and which came from reading.
 
 1. **Correctness and memory safety** — unchecked `Option.get`, object-variant fields read under the
    wrong `kind`, a collection changed while it is iterated (`del` inside `for … in t`), integer and
-   range conversions from untrusted input, `cast`/`ptr`/`addr` without a
-   soundness argument, a `cstring` outliving its `string`, missing `=destroy` or double ownership,
+   range conversions from untrusted input (the fix: parse, check the bounds, then convert;
+   nim-best-practices section 5), `cast`/`ptr`/`addr` without a soundness argument, a `cstring` outliving its `string`, missing `=destroy` or double ownership,
    `{.cast(gcsafe).}` hiding a data race, shared state without a lock.
 2. **Error handling** — `except` that only discards (BN-01), `except Exception:`, exported procs
    without `raises`, exception types inheriting from `Exception`, errors turned into default values,
@@ -89,8 +89,8 @@ findings the tools caught and which came from reading.
 - **Must fix**: wrong results, any `Defect` (crash) reachable from external input (valid or not)
   or from valid state, memory or thread unsafety, swallowed errors, security. A data race or a memory error you can show by
   reading the code is Must fix even when a probe does not reproduce it: such bugs depend on timing
-  and the allocator. Say whether you reproduced it. Tier by the build the project ships, not
-  `-d:danger`; when `-d:danger` turns the Defect into a silent wrong result, say so in the finding.
+  and the allocator. Say whether you reproduced it. Tier by the build the project ships (the
+  default build, checks on, when nothing says otherwise), not `-d:danger`; when `-d:danger` turns the Defect into a silent wrong result, say so in the finding.
 - **Should fix**: API and error-handling rules that will cost callers later.
 - A doc comment that promises behaviour the code lacks is Should fix (section 10), Must fix when
   callers rely on it. When you cannot tell what the author meant, file it under Should fix with

@@ -48,7 +48,7 @@ Decide the public types and procs first (guide section 4), then fill them in unt
 | Python `dict` (insertion order) | `OrderedTable` when order is observable, else `Table` |
 | Python `bytes`, JS `Uint8Array` | `seq[byte]` |
 | JS `number` | `int` or `float` chosen per use; check ranges |
-| Python `int` (unbounded) | `int`, with the bound checked before arithmetic can overflow (overflow raises `OverflowDefect`, not the original's error) |
+| Python `int` (unbounded) | `int`, with the bound checked before arithmetic can overflow (overflow raises `OverflowDefect`, not the original's error): saturate just past the bound, or check before multiplying, and keep the original's order of errors |
 | Python `str` (code points) | `string` (UTF-8 bytes); `std/unicode` runes where code points matter |
 | Python generator | `iterator`; a closure iterator only when it is stored or passed |
 | Go `error` return | raise, or `Opt`/result value; never ignore it |
