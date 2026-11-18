@@ -538,8 +538,9 @@ doAssert squares(3) == @[0, 1, 4]
   and a closure that raises no longer fits. The call sites the task describes still compile; name
   the added list in your notes. Catch `CatchableError` only; a `Defect` is a bug to fix, not an
   error to carry across C. Build such code with `--panics:on`, so a Defect ends the program
-  where it happens instead of unwinding through C: pass it to `nim c` for the program and for
-  its probes (a project puts it in its `nim.cfg`). When the C API has
+  where it happens instead of unwinding through C: pass it on the command line
+  (`nim c --panics:on`) for the program and its probes, and leave the copied `lints/nim.cfg` as
+  it is (a project puts it in its own `nim.cfg`). When the C API has
   no context argument (`qsort`), keep the context in a `{.threadvar.}`: save the old value, set
   it, call C, then restore the old value, so a nested call from inside the callback works.
 - A C parameter of type `const T*` needs a type that prints as such:
@@ -591,8 +592,9 @@ doAssert byteLen("abc") == 3
   The block goes in the routine's body after the `##` lines, never inside the doc comment.
   Doc comments are RST: a bare `**` (as in `2**31`) is a markup error; write `2^31` or put
   code in double backquotes.
-  Every public template and macro has one, and so does every exported proc whose use is not
-  obvious from its signature (what it raises, what it does at the edges); iterators count as procs. Trivial getters need none.
+  Every public template and macro has one, and so does every exported proc or iterator that
+  raises, takes a callback, or behaves specially at an edge (empty input, a bound). Plain getters
+  and one-line wrappers need none.
   A block sees the module's exported symbols but **not the module's imports**: import what the
   example uses (`std/options`, `std/tables`) inside the block, operators included (`in` on
   strings comes from `std/strutils`), as below. When `nim doc` fails on an
@@ -633,7 +635,7 @@ func firstOf*(xs: openArray[int]; parity: Parity): Option[int] {.raises: [].} =
   every input must give a result or the documented `CatchableError`; any `Defect` fails. Run tests
   under sanitizers
   (`-d:useMalloc --passC:-fsanitize=address --passL:-fsanitize=address --debugger:native`).
-  Where the sanitizer cannot run, test memory ownership two other ways: build with `-d:useMalloc`
+  Where the sanitizer cannot run (it fails to build, or a run hangs: give it a timeout), test memory ownership two other ways: build with `-d:useMalloc`
   so the platform allocator aborts on a double free (on macOS, also run with `MallocScribble=1`).
   Then, with the default allocator, compare `getOccupiedMem()` before and after a loop of
   create, move and destroy, at two loop counts (say 2 000 and 20 000). A difference that grows

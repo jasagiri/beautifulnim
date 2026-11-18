@@ -18,7 +18,8 @@ report it, that one says what good looks like.
 - What is under review: a file, a module, a package, or a diff (review the changed lines and what
   they touch, not the whole repository).
 - Library or application (section 1 of the guide): libraries are held to the API rules, effect
-  annotations and no global state; applications to clarity and error reporting.
+  annotations and no global state; applications to clarity and error reporting. A module inside
+  a service is application code, unless other packages import it.
 - Nim version and memory manager (`nim -v`, the `requires "nim >= …"` line, `--mm`), and the
   project's own conventions (constructor style `initFoo` vs `Foo.init`, `results` vs exceptions,
   `asyncdispatch` vs `chronos`, formatter). Judge by those, and say where they differ from the guide.
@@ -26,8 +27,8 @@ report it, that one says what good looks like.
 ## 2. Run the tools first
 
 1. `nim check` on the files with the project's `nim.cfg`, then again with the lines of
-   `lints/nim.cfg` added (with no project `nim.cfg`, one run with `lints/nim.cfg` alone). When the code defines
-   hooks, also `nim c`: `nim check` does not report a forbidden copy (nim-best-practices
+   `lints/nim.cfg` added (with no project `nim.cfg`, one run with `lints/nim.cfg` alone). When
+   the code defines hooks, also `nim c`: `nim check` does not report a forbidden copy (nim-best-practices
    section 2). Every error is a finding. For a loose file, or a file whose name is not a
    Nim identifier, follow nim-best-practices section 2 (copy, `nim.cfg` next to it, `nim doc` when
    it has `runnableExamples`) and say in the summary which copy you checked.
@@ -36,9 +37,11 @@ report it, that one says what good looks like.
 3. The project's tests. A failing test is the first finding. If there are none, say so in the
    summary and name the behaviour a test should pin down.
 
-Probes go through the public API and `import` the module. Only to reach private state, probe a copy of the module: either with the
-probe under `when isMainModule:` at its end, or with the needed symbols exported and a separate
-probe file importing it. Say in the summary that you did.
+Probes go through the public API and `import` the module. Only to reach private state, probe a
+copy of the module under a new name (`ledger_probe.nim`) with the needed symbols exported, and a
+separate probe file that imports it; leave the module itself unchanged. Say in the summary that
+you did. Put probes in their own directory: every file next to a copied `nim.cfg` is checked
+under it, so an unused import in a probe becomes an error.
 
 Report what the tools found as tool findings; do not re-derive them by reading. The tools miss
 most correctness bugs: findings from reading go into the same tiers, and the summary says which
@@ -48,7 +51,8 @@ findings the tools caught and which came from reading.
 
 1. **Correctness and memory safety** — unchecked `Option.get`, object-variant fields read under the
    wrong `kind`, a collection changed while it is iterated (`del` inside `for … in t`;
-   the fix collects the keys first, then deletes), integer and
+   the fix collects the keys first, then deletes), integer overflow in sums of amounts from
+   outside (a Defect, so Must fix), integer and
    range conversions from untrusted input (the fix: parse, check the bounds, then convert;
    nim-best-practices section 5), `cast`/`ptr`/`addr` without a soundness argument, a `cstring` outliving its `string`, missing `=destroy` or double ownership,
    `{.cast(gcsafe).}` hiding a data race, shared state without a lock.

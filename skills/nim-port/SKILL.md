@@ -18,6 +18,8 @@ the original — not the original's structure in Nim syntax.
   edge cases (empty input, huge input, invalid UTF-8, overflow, missing files).
 - Separate behaviour from accident: things that only exist because of the source language (manual
   memory management, a GIL workaround, Python's dict ordering, JavaScript's number type).
+- A limit of the source runtime that callers can see (Python's 4300-digit `int()` limit) is
+  behaviour when the task asks for the same results on every input: keep it and list it.
 - Bugs are behaviour until told otherwise: keep them, mark them in a test, and list them.
 - Error messages are behaviour when callers or the task read them. When the task names only the
   error type, match the type and list the message differences in the notes.
@@ -26,7 +28,7 @@ the original — not the original's structure in Nim syntax.
 
 - One Nim test per original test, same name in Given-When-Then form, in `tests/` with
   `std/unittest`. If the original has no tests, write tests from the behaviour list (its
-  docstrings, its docs) before porting, and map those clauses in the notes instead of tests.
+  docstrings, its docs) before porting; the notes map each clause to its test name.
 - Run them against a stub that compiles: all fail, except tests the stub meets by accident (an
   empty result for empty input); list those. That is the baseline.
 
