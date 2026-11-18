@@ -44,6 +44,9 @@ Decide the public types and procs first (guide section 4), then fill them in unt
 | Python `dict` (insertion order) | `OrderedTable` when order is observable, else `Table` |
 | Python `bytes`, JS `Uint8Array` | `seq[byte]` |
 | JS `number` | `int` or `float` chosen per use; check ranges |
+| Python `int` (unbounded) | `int`, with the bound checked before arithmetic can overflow (overflow raises `OverflowDefect`, not the original's error) |
+| Python `str` (code points) | `string` (UTF-8 bytes); `std/unicode` runes where code points matter |
+| Python generator | `iterator`; a closure iterator only when it is stored or passed |
 | Go `error` return | raise, or `Opt`/result value; never ignore it |
 | Go goroutines + channels | threads + channels, or async; move data, do not share it |
 | Rust `Result<T, E>` | exceptions with `raises`, or the `results` package if the project uses it |
@@ -65,6 +68,8 @@ Decide the public types and procs first (guide section 4), then fill them in unt
 - Run both versions on the same inputs where possible and compare outputs byte for byte.
 
 ## 6. Write PORTING.md
+
+When the task names the notes file, use its name; the contents stay the same.
 
 - API mapping: each original function or type → its Nim counterpart.
 - Test mapping: each original test → its Nim test.

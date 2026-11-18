@@ -85,8 +85,8 @@ findings the tools caught and which came from reading.
 - <specific things worth keeping, with file:line>
 ```
 
-- **Must fix**: wrong results, any `Defect` (crash) reachable from valid input or valid state, memory
-  or thread unsafety, swallowed errors, security. A data race or a memory error you can show by
+- **Must fix**: wrong results, any `Defect` (crash) reachable from external input (valid or not)
+  or from valid state, memory or thread unsafety, swallowed errors, security. A data race or a memory error you can show by
   reading the code is Must fix even when a probe does not reproduce it: such bugs depend on timing
   and the allocator. Say whether you reproduced it.
 - **Should fix**: API and error-handling rules that will cost callers later.

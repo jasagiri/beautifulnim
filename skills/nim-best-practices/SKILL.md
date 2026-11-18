@@ -51,6 +51,9 @@ reported by `beautifulnim check` (the CLI in this repository); rules the compile
     read the `nim c` errors. Only routines the program calls are checked, and the build stops at
     the first routine that copies: call every routine from a probe, fix what is reported, and
     rebuild until it is clean.
+  - If the code imports C through a `header`, also run `nim c file.nim`. `nim check` does not run
+    the C compiler, and only the C compiler checks the call against the header's prototype (clang
+    rejects a `qsort` comparator that takes `void*` instead of `const void*`).
   - `beautifulnim check` prints nothing and exits 0 when it finds nothing; add `--format:json` to
     see each file it parsed.
 - Use `lints/nim.cfg` (copy the lines into the project's `nim.cfg`): `--styleCheck:usages`,
@@ -520,6 +523,14 @@ doAssert squares(3) == @[0, 1, 4]
   allocated it. Wrap an owning C pointer in an object with `=destroy`. Turn `NULL` into `Option` or
   a raised error. Callbacks passed to C are `{.cdecl, raises: [].}`: an exception must not unwind
   through C frames.
+- A C callback that calls a Nim closure catches what the closure raises, stores it, and the
+  wrapper raises it again after the C call returns. Give the closure's type its raises list
+  (`proc (x, y: int): int {.raises: [CatchableError].}`): under `{.push raises: [].}` a proc type
+  without one also means `raises: []`, and a closure that raises no longer fits. When the C API has
+  no context argument (`qsort`), keep the context in a `{.threadvar.}`: save the old value, set
+  it, call C, then restore the old value, so a nested call from inside the callback works.
+- A C parameter of type `const T*` needs a type that prints as such:
+  `type ConstPtr {.importc: "const void*", nodecl.} = pointer`.
 - Use `distinct` for handles from C so they cannot be mixed up.
 - `ptr T` does not index; `ptr UncheckedArray[T]` does. The standard library has no
   pointer-arithmetic module (there is no `std/ptrmath`), and no cast-free way to turn the result
@@ -561,6 +572,7 @@ doAssert byteLen("abc") == 3
 - `##` doc comments on every exported symbol; the first sentence is a one-line summary. A module
   starts with a `##` paragraph saying what it is for.
 - Put examples in `runnableExamples:` blocks; `nim doc` compiles and runs them, so they stay true.
+  The block goes in the routine's body after the `##` lines, never inside the doc comment.
   Every public template and macro has one, and so does every exported proc whose use is not
   obvious from its signature (what it raises, what it does at the edges). Trivial getters need none.
   A block sees the module's exported symbols but **not the module's imports**: import what the
