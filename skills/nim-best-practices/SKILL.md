@@ -525,8 +525,10 @@ doAssert squares(3) == @[0, 1, 4]
   through C frames.
 - A C callback that calls a Nim closure catches what the closure raises, stores it, and the
   wrapper raises it again after the C call returns. Give the closure's type its raises list
-  (`proc (x, y: int): int {.raises: [CatchableError].}`): under `{.push raises: [].}` a proc type
-  without one also means `raises: []`, and a closure that raises no longer fits. When the C API has
+  (`proc (x, y: int): int {.raises: [CatchableError].}`), even when the task writes the parameter
+  type without it: under `{.push raises: [].}` a proc type without one also means `raises: []`,
+  and a closure that raises no longer fits. Catch `CatchableError` only; a `Defect` is a bug to
+  fix, not an error to carry across C. When the C API has
   no context argument (`qsort`), keep the context in a `{.threadvar.}`: save the old value, set
   it, call C, then restore the old value, so a nested call from inside the callback works.
 - A C parameter of type `const T*` needs a type that prints as such:
@@ -534,7 +536,9 @@ doAssert squares(3) == @[0, 1, 4]
 - Use `distinct` for handles from C so they cannot be mixed up.
 - `ptr T` does not index; `ptr UncheckedArray[T]` does. The standard library has no
   pointer-arithmetic module (there is no `std/ptrmath`), and no cast-free way to turn the result
-  of `alloc0` into an indexable pointer: that one `cast` is the sanctioned form. If you only need
+  of `alloc0`, or a pointer C hands you, into an indexable pointer: that one `cast` is the
+  sanctioned form. The exception is a NUL-terminated C string: `for c in mitems(s)` on a
+  `var cstring` writes its bytes with no cast. If you only need
   a growable buffer, a `seq[T]` needs no unsafe code at all; use raw memory only when the task
   requires it.
 - Memory you own directly: allocate in one constructor
@@ -616,7 +620,10 @@ func firstOf*(xs: openArray[int]; parity: Parity): Option[int] {.raises: [].} =
   so the platform allocator aborts on a double free (on macOS, also run with `MallocScribble=1`).
   Then, with the default allocator, compare `getOccupiedMem()` before and after a loop of
   create, move and destroy, at two loop counts (say 2 000 and 20 000). A difference that grows
-  with the count is a leak. A constant one is the runtime's first-use allocation.
+  with the count is a leak. A constant one is the runtime's first-use allocation. These ownership
+  tests are for code that owns memory (`ptr`, `alloc`, hooks); for code that does not, say so
+  and skip them.
+- Outside a project there is no test task: run a test file with `nim c -r tests/tfoo.nim`.
 - Test what must not compile. `doAssert not compiles(expr)` works for type errors and a macro's
   `error`, but not for a forbidden copy: `=copy {.error.}` is reported after `compiles` has
   answered (and after `nim check` has finished). Put the copy in its own file and expect `nim c` to fail.
@@ -639,7 +646,7 @@ func firstOf*(xs: openArray[int]; parity: Parity): Option[int] {.raises: [].} =
 
 - `nim check` clean with `lints/nim.cfg`; tests pass; `beautifulnim check` reports nothing at level warning
   or above, or each report has a reason.
-- Every exported proc has `raises`; no `except Exception:`, no `except` that only discards.
+- Every exported proc, func and iterator has `raises`; no `except Exception:`, no `except` that only discards.
 - No warnings switched off; no `converter`; no `include`; `method` only for open hierarchies.
 - No public `bool` parameters; enums, `distinct`, `range`, `Option` and object variants carry the
   meaning.

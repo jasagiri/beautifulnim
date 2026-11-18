@@ -36,8 +36,9 @@ report it, that one says what good looks like.
 3. The project's tests. A failing test is the first finding. If there are none, say so in the
    summary and name the behaviour a test should pin down.
 
-Probes go through the public API and `import` the module. Only to reach private state, probe a copy of the module with the
-probe under `when isMainModule:` at its end, and say in the summary that you did.
+Probes go through the public API and `import` the module. Only to reach private state, probe a copy of the module: either with the
+probe under `when isMainModule:` at its end, or with the needed symbols exported and a separate
+probe file importing it. Say in the summary that you did.
 
 Report what the tools found as tool findings; do not re-derive them by reading. The tools miss
 most correctness bugs: findings from reading go into the same tiers, and the summary says which
@@ -88,7 +89,8 @@ findings the tools caught and which came from reading.
 - **Must fix**: wrong results, any `Defect` (crash) reachable from external input (valid or not)
   or from valid state, memory or thread unsafety, swallowed errors, security. A data race or a memory error you can show by
   reading the code is Must fix even when a probe does not reproduce it: such bugs depend on timing
-  and the allocator. Say whether you reproduced it.
+  and the allocator. Say whether you reproduced it. Tier by the build the project ships, not
+  `-d:danger`; when `-d:danger` turns the Defect into a silent wrong result, say so in the finding.
 - **Should fix**: API and error-handling rules that will cost callers later.
 - A doc comment that promises behaviour the code lacks is Should fix (section 10), Must fix when
   callers rely on it. When you cannot tell what the author meant, file it under Should fix with

@@ -19,12 +19,16 @@ the original — not the original's structure in Nim syntax.
 - Separate behaviour from accident: things that only exist because of the source language (manual
   memory management, a GIL workaround, Python's dict ordering, JavaScript's number type).
 - Bugs are behaviour until told otherwise: keep them, mark them in a test, and list them.
+- Error messages are behaviour when callers or the task read them. Otherwise match the error
+  type and list the message differences in the notes.
 
 ## 2. Port the tests first
 
 - One Nim test per original test, same name in Given-When-Then form, in `tests/` with
-  `std/unittest`. If the original has no tests, write tests from the behaviour list before porting.
-- Run them: all fail (nothing is implemented yet). That is the baseline.
+  `std/unittest`. If the original has no tests, write tests from the behaviour list (its
+  docstrings, its docs) before porting, and map those clauses in the notes instead of tests.
+- Run them against a stub that compiles: all fail, except tests the stub meets by accident (an
+  empty result for empty input); list those. That is the baseline.
 
 ## 3. Design the API, then implement
 
