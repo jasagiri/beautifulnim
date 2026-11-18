@@ -35,6 +35,11 @@ Part of nim-best-practices section 8. Read it before writing `importc`, a C call
   Nim's own allocator does: `raise newException(OutOfMemDefect, "strdup returned NULL")`
   (`OutOfMemError` is deprecated, and `raiseOutOfMem` is not public).
 - Use `distinct` for handles from C so they cannot be mixed up.
+- A C flag word (`O_CREAT | O_APPEND`) stays a C integer in the binding, built from the values
+  the header defines. A `set[Enum]` is not that integer: its size depends on how many values
+  the enum has (1 byte up to 8, 2 up to 16, 4 up to 32), and its bit `i` is the enum's ordinal
+  `i`, not the C mask. Offer `set[Enum]` in the Nim API and convert in the wrapper, with no
+  `cast`:
 - `ptr T` does not index; `ptr UncheckedArray[T]` does. The standard library has no
   pointer-arithmetic module (there is no `std/ptrmath`), and no cast-free way to turn the result
   of `alloc0`, or a pointer C hands you, into an indexable pointer: that one `cast` is the
@@ -52,4 +57,23 @@ proc byteLen*(s: string): int =
   int(cStrlen(s.cstring))
 
 doAssert byteLen("abc") == 3
+```
+
+```nim
+let
+  cCreat {.importc: "O_CREAT", header: "<fcntl.h>".}: cint
+  cAppend {.importc: "O_APPEND", header: "<fcntl.h>".}: cint
+
+type OpenFlag* = enum
+  ofCreate, ofAppend
+
+proc toCFlags*(flags: set[OpenFlag]): cint =
+  ## The C flag word for `flags`, from the header's own values.
+  for f in flags:
+    result = result or (case f
+      of ofCreate: cCreat
+      of ofAppend: cAppend)
+
+doAssert toCFlags({}) == 0
+doAssert toCFlags({ofCreate, ofAppend}) == (cCreat or cAppend)
 ```

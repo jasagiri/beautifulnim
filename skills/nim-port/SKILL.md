@@ -43,7 +43,7 @@ Decide the public types and procs first (guide section 4), then fill them in unt
 | `NULL` / `None` / `null` / `undefined` | `Option[T]`, or a non-nilable value type |
 | error codes, `errno` | a `CatchableError` subtype with `{.raises: [...]}`, or a result value |
 | out-parameters (`int *out`) | return a tuple or an object |
-| flag integers (`O_RDONLY | O_CREAT`) | `set[Flag]` |
+| flag integers (`O_RDONLY | O_CREAT`) | `set[Flag]` in the Nim API; the C binding keeps the integer (`skills/nim-best-practices/details/ffi.md`) |
 | `bool` options on public functions | an enum, or two procs |
 | `struct` + functions | `object` + procs with the object first |
 | class hierarchy with virtual methods | object variant + `case`; `method` only for an open set |

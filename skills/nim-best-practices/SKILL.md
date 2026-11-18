@@ -174,7 +174,8 @@ connect("example.com", tls)
 ```
 
 - **Independent flags are a `set[Enum]`** (a bit set, no extra library):
-  `open(path, {fmRead, fmCreate})`, not three booleans.
+  `open(path, {fmRead, fmCreate})`, not three booleans. A C flag word is not a `set`
+  (details/ffi.md).
 - **Absence is `Option[T]`**, never a sentinel (`-1`, `""`, `nil`). A field that only exists for
   one kind of value belongs in an **object variant**:
 
