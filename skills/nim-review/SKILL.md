@@ -11,7 +11,8 @@ description: >-
 # Nim review
 
 Read `skills/nim-best-practices/SKILL.md` first; this skill decides what to look at and how to
-report it, that one says what good looks like.
+report it, that one says what good looks like. Its section 0 decides when the task, the guides or
+the setting disagree.
 
 ## 1. Decide the scope
 
@@ -114,9 +115,11 @@ findings the tools caught and which came from reading.
   nim-best-practices; when no section covers it, write `Rule: none in the guide` and state the
   mechanism (what fails, under which input). Do not report taste without a rule.
   Where the hard defects live in the guide: copies of a type with `=destroy`, hooks and moves in
-  section 3; `addr`/`ptr` into a `seq` or `string` that later grows, `cast`, `UncheckedArray`,
-  `cstring` lifetimes in section 8; threads, `{.cast(gcsafe).}` and `asyncCheck` in section 7;
-  templates and macros under "Templates and macros" in section 4.
+  section 3 and `skills/nim-best-practices/details/ownership.md`; `addr`/`ptr` into a `seq` or
+  `string` that later grows, `cast`, `UncheckedArray`, `cstring` lifetimes in section 8 and
+  `skills/nim-best-practices/details/ffi.md`; threads, `{.cast(gcsafe).}` and `asyncCheck` in
+  `skills/nim-best-practices/details/concurrency.md`; templates and macros in
+  `skills/nim-best-practices/details/templates-and-macros.md`.
 - "What is already good" is required; it tells the author what not to change.
 - Write the review in the language of the pull request or the project's documentation; with
   neither, in the language of the request.

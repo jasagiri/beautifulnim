@@ -18,6 +18,25 @@ reported by `beautifulnim check` (the CLI in this repository); rules the compile
 switched on in `lints/nim.cfg`. This file is about 40 000 characters: if your reader cuts it
 off, read the rest by line range before you start.
 
+## 0. When the task, the guide or the setting disagree
+
+- **The task's explicit words win**: file names, signatures, keywords (`proc` or `func`), output
+  format. A rule of this guide still applies when it only adds to them and the call sites the task
+  describes still compile (a `raises` list, `gcsafe`, a doc comment); name each addition in your
+  notes.
+- **Two rules of the guide pull apart**: the one about the construct in front of you wins over the
+  general one; if that does not decide it, take the one that keeps a check or reports an error.
+- **The guide does not decide**: choose, write the choice and the reason in your notes, and go on.
+  That is not a failure.
+- **A step cannot run** (no project, a tool that fails or hangs, a program you may not run, a
+  directory you may not write outside): write "not run" with the reason and what you did instead,
+  and go on.
+- **No project**: treat the file as a project of one: a copy of `lints/nim.cfg` next to it
+  (section 2), tests in `tests/` beside it run with `nim c -r` (section 11), probes in a
+  directory of their own.
+- **Details**: `details/` belongs to this guide; read the file a section names before writing that
+  kind of code.
+
 ## 1. Mindset
 
 - **Write Nim-shaped code**, not Java, C++ or Python translated line by line. Data is plain
@@ -74,7 +93,6 @@ off, read the rest by line range before you start.
   same name; `--styleCheck:error` stops the mixture (Status).
 
 ## 3. Values, copies and moves (ARC/ORC)
-
 - **Value semantics by default.** `object`, `seq`, `string` and tuples copy on assignment; the
   compiler turns the last use of a value into a move. Write code that lets it: do not read a
   variable again after passing it to a `sink` parameter. This applies to locals inside a routine
@@ -89,56 +107,9 @@ off, read the rest by line range before you start.
   code. When both forms exist, the value type gets the plain name and the other `FooRef` (NEP1
   gives the plain name to the variety used most; the Status guide always suffixes `Ref`; follow the
   project).
-- **Resources get a destructor, not a finalizer.** Write `=destroy`, decide what a copy means, and
-  reset in `=wasMoved`. Destructors must not fail or raise. When releasing can fail (a file, a
-  socket), give the type an explicit `close` that reports errors, and let `=destroy` be the
-  best-effort fallback; memory alone needs no `close`. Finalizers (`new(x, finalizer)`)
-  are not deterministic (Status).
-- **A type with `=destroy` must say what a copy does.** Without `=copy` the compiler copies the
-  fields bit by bit, so two values free the same memory: a double free the first time a copy is
-  made. Passing the value to a plain parameter only borrows it; a copy happens when a value that
-  is still used afterwards is stored (added to a `seq`, assigned to a variable or a field).
-  Choose one:
-  - `=copy {.error.}` when the type owns something unique (a file, a socket, a lock) or a copy
-    would be a hidden allocation on a hot path. `=dup` then becomes unavailable as well; it needs no
-    hook of its own.
-  - a deep `=copy` that allocates and copies, when the type is a general container whose users
-    expect value semantics, as `seq` does.
-
-```nim
-import std/[oserrors, posix]
-
-type
-  Fd = object
-    ## An open file descriptor. Move-only: a copy would close it twice.
-    raw: cint
-
-proc `=destroy`(f: Fd) =
-  if f.raw >= 0:
-    # Best effort: a caller that cares about the error calls close first.
-    discard posix.close(f.raw)
-
-proc `=wasMoved`(f: var Fd) = f.raw = -1
-proc `=copy`(dst: var Fd; src: Fd) {.error.}
-
-proc close(f: var Fd) {.raises: [OSError].} =
-  ## Closes now and reports failure; the destructor then has nothing left to do.
-  if f.raw >= 0:
-    let rc = posix.close(f.raw)
-    f.raw = -1
-    if rc != 0: raiseOSError(osLastError())
-
-proc openFd(path: string): Fd {.raises: [OSError].} =
-  let raw = posix.open(path.cstring, O_RDONLY)
-  if raw < 0: raiseOSError(osLastError(), path)
-  Fd(raw: raw)
-
-var f = openFd("/dev/null")
-f.close()
-```
-
-- `{.cursor.}` marks a non-owning `ref` (a parent pointer) to break a cycle without the cycle
-  collector. It is a raw pointer with no checks: the target must outlive it.
+- **Resources and hooks.** A type that owns memory or an operating-system resource gets
+  `=destroy` and decides what a copy does (`=copy {.error.}` or a deep `=copy`). Read
+  `details/ownership.md` before writing either.
 - Iterate with `items`/`pairs` to read and `mitems`/`mpairs` to change elements in place; neither
   copies the elements. Use `move(x)` or `ensureMove(x)` only where the compiler cannot see that a
   value is no longer used.
@@ -272,119 +243,10 @@ if rect.isSome:
 
 ### Templates and macros
 
-A template pastes syntax trees at the call site; a macro is a proc the compiler runs on syntax
-trees. Both are expanded into the caller's code, which is where their power and their bugs come
-from. Lisp has lived with this for decades, and its lessons carry over almost unchanged
-(`references/macros.md` maps them to Nim).
-
-**Use the least powerful tool that works** (the manual's style note): a proc, then a generic
-proc, then a template, then a macro. Speed is not a reason to climb: mark a small proc
-`{.inline.}` instead (Google's Lisp guide: do not use macros for performance). Climb only for what a
-proc cannot do (On Lisp, ch. 8):
-
-- **Control evaluation**: run an argument lazily (only when logging is on), repeatedly (a body in
-  a loop) or never (`astToStr`, `compiles`). A proc evaluates every argument exactly once, first.
-- **Bind names the caller uses**: `withFile(f, …)` declares `f`; `mapIt` provides `it`.
-- **Look inside an argument's syntax** (transformation): only a macro can see that an argument is
-  `a == b` and report both sides. A template cannot take its argument apart.
-- **Compute at compile time** what `const` and a proc called in a `const` cannot.
-
-When you do climb, these hold:
-
-1. **Stay hygienic (BN-08).** Templates are hygienic by default: a `let` or `var` inside one gets a
-   fresh name and cannot clash with the caller's. Keep it that way. A name the caller must see
-   comes in as a parameter or is marked `{.inject.}`, and the doc comment lists it. `{.dirty.}`
-   switches hygiene off for every name in the template; keep it only with a comment saying why.
-   Never read a caller's variable that is not a parameter: On Lisp calls such capture "a source of
-   contagion" and notes that it usually happens by mistake.
-2. **Evaluate each argument once, in order (BN-10).** A template pastes the argument's *tree* at
-   every use, typed parameters included, so `sq(next())` with `x * x` in the body calls `next`
-   twice. Bind each argument with `let` in the order the parameters appear, then use the binding.
-   A literal (`nil`, `[]`, `{}`, `0`) has no side effects and may have no type of its own
-   (`let r = nil` does not compile): paste it instead of binding it.
-   The exceptions are the arguments the template exists to repeat or skip (a loop body, a lazily
-   built message). Say so in the doc comment, so callers know.
-3. **Build trees, not strings (BN-09).** In a macro, build code with `genAst` (std/genasts) or
-   `quote do`. `parseStmt`/`parseExpr` on assembled text loses hygiene and the caller's line
-   information. It also turns whatever reaches the string into code.
-4. **A macro processes syntax; the work goes in procs.** Keep the expansion small. Have it call
-   an ordinary proc that holds the logic, so that the logic is tested as a proc (Google's Lisp
-   guide calls this "call-with style").
-5. **Check the input's shape and report at the caller.** Before building anything, check the kind
-   of each node (`expectKind`, `expectLen`, or an `if` with `error(msg, node)`). Then a misuse is one
-   clear error on the caller's line, not a confusing one inside the expansion.
-6. **`typed` before `untyped`.** Give a parameter a real type when it is a value: overloads resolve
-   and type errors appear before expansion. Use `untyped` only for a name to bind, a body, or syntax
-   to transform.
-7. **Make it readable from outside.** Every public template and macro has a `##` comment that says
-   what it expands to in words, which names it injects, and how often each argument is evaluated,
-   plus `runnableExamples`: a code block in the routine's body right after the `##` lines, never
-   text inside the comment (written there it is not compiled, and `nim doc` warns about broken
-   links). Do not generate the public API with macros: it cannot be found by
-   reading or documented (Status). Avoid macros that write macros (Google's Lisp guide).
-8. **Say what control flow does inside a body.** A body parameter placed inside the template's
-   own `while` or `for` captures the caller's `break` and `continue`: they leave your loop, not
-   theirs, and nothing warns. `return` leaves the caller's proc. State in the doc comment which of
-   these work. If `break` must reach the caller's loop, use a loop variable instead of a loop
-   around the body. When repeating the body is the template's purpose (`retry`), the loop stays:
-   document that `break` and `continue` end the template's loop, and leave it on a flag
-   (`while not done`) rather than a `break` after the body: inside the loop,
-   `try: done = true; body` and `except: done = false` (re-raise on the last attempt), so a body
-   that finishes normally ends the loop and one that raises repeats it. Do not put statements after the body
-   in the same block either: when the
-   body always ends in `return` or `raise`, the caller gets an `UnreachableCode` warning for code
-   they never wrote. Set a flag before the body instead (`done = true; body`) and clear it in the
-   `except` branch. A warning about the caller's own statements after the template, when the
-   body always returns, is correct: that code is dead, and it is the caller's to remove.
-9. **Keep helpers private.** The proc that an expansion calls (rule 4) can stay unexported:
-   templates and `genAst`/`quote` bind the symbols visible where they are defined. Exporting it
-   would only add to the caller's namespace. Test the expansion from another module to be sure.
-10. **Test the behaviour and the misuse.** Test what the expansion does, as you would a proc. Test
-   rejected input with `doAssert not compiles(...)`. To see an expansion, use `expandMacros` or
-   `echo result.repr` while writing the macro, and remove it before you hand the code back.
-
-```nim bad
-template sq*(x: int): int = x * x # sq(next()) calls next twice (BN-10); a proc would do
-```
-
-```nim
-func sq*(x: int): int {.inline.} = x * x # a proc evaluates x once; inline keeps it fast
-
-const debugLog {.booldefine.} = false
-
-template debug*(msg: string) =
-  ## Writes `msg` to stderr when compiled with `-d:debugLog`. `msg` is evaluated only then,
-  ## so building it costs nothing in a normal build.
-  when debugLog:
-    stderr.writeLine msg
-```
-
-A macro that needs to see inside its argument checks the argument's shape, evaluates each operand
-once, and builds the result with `genAst`. The example prints operands with `$`. When the operand
-types are arbitrary, call a helper that falls back to `repr` (`when compiles($x): $x else: repr(x)`),
-so that types without `$` still compile:
-
-```nim
-import std/[macros, genasts]
-
-macro expect*(cond: untyped): untyped =
-  ## Like `doAssert`, but a failed comparison shows both operands. Each operand is evaluated once,
-  ## left to right; the names `l` and `r` are hygienic and cannot clash with the caller's.
-  runnableExamples:
-    let a = 2
-    expect a + 1 == 3
-    doAssert not compiles(expect true)
-    doAssertRaises(AssertionDefect): expect a == 3
-  const comparisons = ["==", "!=", "<", "<=", ">", ">="]
-  if cond.kind != nnkInfix or cond[0].strVal notin comparisons:
-    error("expect needs a comparison such as `a == b`", cond)
-  let text = cond.repr
-  result = genAst(op = cond[0], lhs = cond[1], rhs = cond[2], text):
-    let l = lhs
-    let r = rhs
-    if not op(l, r):
-      raiseAssert text & ": left is " & $l & ", right is " & $r
-```
+Use the least powerful tool that works: a proc, then a generic proc, then a template, then a
+macro. Read `details/templates-and-macros.md` before writing a template or a macro: hygiene
+(BN-08), building trees rather than strings (BN-09), evaluating each argument once (BN-10), and
+how to test them.
 
 ### Refactoring someone else's code
 
@@ -496,25 +358,9 @@ doAssert squares(3) == @[0, 1, 4]
 
 ## 7. Concurrency and async
 
-- Threads are on by default in Nim 2. Move data between threads instead of sharing it:
-  `Isolated[T]` (std/isolation) proves a value has no other references; channels pass ownership.
-- A thread proc must be `gcsafe`: no access to globals holding `string`, `seq`, `ref` or closures.
-  Do not silence that with `{.cast(gcsafe).}`; restructure, or explain in a comment why the access
-  is safe and how it is synchronised. The one common exception: a global marked
-  `{.guard: lock.}` is still not GC-safe inside `withLock`, so put `{.cast(gcsafe).}` inside the
-  `withLock` block, around the guarded access only, with a comment naming the lock.
-- Shared state: one `Lock` per invariant, fields marked `{.guard: lock.}` so the compiler enforces
-  `withLock`, short critical sections, and no callbacks or I/O while holding a lock.
-- Async: use one runtime per program — `std/asyncdispatch` or `chronos` — and follow the project.
-  `await` every future or handle it; `asyncCheck` turns a failure into a crash of the dispatcher.
-  `std/asyncdispatch` futures carry no exception types, so a proc that calls `await`, `waitFor`
-  or `asyncCheck` is inferred to raise `Exception`. Handle the failure where the future completes
-  (`try`/`except` around `await` inside the async proc), and write `{.raises: [Exception].}` on
-  the synchronous caller with a comment saying why. On an exported proc that annotation is the
-  one section 5 asks for, and it is required: the compiler checks it, and a narrower list does
-  not compile.
-  CPU-bound work blocks the event loop; give it a thread pool.
-- Libraries do not start threads or run the event loop; they take what they need as parameters.
+Move data between threads instead of sharing it; a thread proc is `gcsafe`; use one async runtime
+per program; libraries do not start threads or run the event loop. Read `details/concurrency.md`
+before writing threads, locks, channels or async code.
 
 ## 8. Unsafe code and FFI
 
@@ -527,57 +373,8 @@ doAssert squares(3) == @[0, 1, 4]
   it: `add`, `setLen`, `insert`, `delete`, or a move of the whole value. Hold the index instead,
   or finish with the pointer before you change the length.
 - Turn a check off only around measured hot code, locally, with the measurement in a comment.
-- FFI: `importc` with a `header`, C types (`cint`, `csize_t`, `cstring`), and a Nim wrapper that
-  converts at the boundary. A `cstring` does not own its bytes: keep the Nim `string` alive while
-  C uses it (`CStringConv` is an error in `lints/nim.cfg`). Free memory with the allocator that
-  allocated it. Wrap an owning C pointer in an object with `=destroy`. Turn `NULL` into `Option` or
-  a raised error. Callbacks passed to C are `{.cdecl, raises: [].}`: an exception must not unwind
-  through C frames.
-- A C callback that calls a Nim closure catches what the closure raises, stores it, and the
-  wrapper raises it again after the C call returns. Give the closure's type its raises list
-  (`proc (x, y: int): int {.raises: [CatchableError].}`), even when the task writes the parameter
-  type without it: under `{.push raises: [].}` a proc type without one also means `raises: []`,
-  and a closure that raises no longer fits. Changing the task's signature this way is allowed: the call sites the task describes still compile; name
-  the added list in your notes. Catch `CatchableError` only; a `Defect` is a bug to fix, not an
-  error to carry across C. Build such code with `--panics:on`, so a Defect ends the program
-  where it happens instead of unwinding through C: pass it on the command line
-  (`nim c --panics:on`) for the program and its probes, and leave the copied `lints/nim.cfg` as
-  it is (a project puts it in its own `nim.cfg`). A library cannot set its callers' flags: its
-  doc comment says that the callback must not raise a Defect unless the program uses
-  `--panics:on`.
-- A `{.threadvar.}` may hold refs and closures, and a `gcsafe` proc may read it. Calling the
-  closure from a `gcsafe` proc needs `gcsafe` in the closure's type. When the C API has
-  no context argument (`qsort`), keep the context in a `{.threadvar.}`: save the old value, set
-  it, call C, then restore the old value, so a nested call from inside the callback works.
-- A C parameter of type `const T*` needs a type that prints as such:
-  `type ConstPtr {.importc: "const void*", nodecl.} = pointer`.
-- Use `distinct` for handles from C so they cannot be mixed up.
-- `ptr T` does not index; `ptr UncheckedArray[T]` does. The standard library has no
-  pointer-arithmetic module (there is no `std/ptrmath`), and no cast-free way to turn the result
-  of `alloc0`, or a pointer C hands you, into an indexable pointer: that one `cast` is the
-  sanctioned form, and so is reading the value a C callback's `const void*` points to
-  (`cast[ptr int](a)[]`). The exception is a NUL-terminated C string: `for c in mitems(s)` on a
-  `var cstring` writes its bytes with no cast (declare the copy with `var`, not `let`). If you only need
-  a growable buffer, a `seq[T]` needs no unsafe code at all; use raw memory only when the task
-  requires it.
-- Memory you own directly: allocate in one constructor
-  (`cast[ptr UncheckedArray[T]](alloc0(n * sizeof(T)))`, with the comment), free it in `=destroy`,
-  and decide copies as in section 3. Keep the zero value valid (section 4): `default(T)` holds a
-  `nil` pointer, so `=destroy` frees only when the pointer is not `nil`. `UncheckedArray` has no bounds checks, so every exported
-  accessor checks the index against the length itself and raises `IndexDefect` with an `if`, the
-  same defect built-in indexing raises (`doAssert` would raise `AssertionDefect`; both survive
-  `-d:danger`). Use `allocShared0`/`deallocShared` only if the memory
-  crosses threads.
-
-```nim
-proc cStrlen(s: cstring): csize_t {.importc: "strlen", header: "<string.h>".}
-
-proc byteLen*(s: string): int =
-  ## Length up to the first NUL, measured by C.
-  int(cStrlen(s.cstring))
-
-doAssert byteLen("abc") == 3
-```
+- Read `details/ffi.md` before writing `importc`, a C callback, `cast`, `ptr`, `addr` or
+  `UncheckedArray`, and run the checks it lists.
 
 ## 9. Packages and modules
 
@@ -629,38 +426,21 @@ func firstOf*(xs: openArray[int]; parity: Parity): Option[int] {.raises: [].} =
 ```
 
 ## 11. Tests
-
 - `std/unittest` with `suite`/`test`, files under `tests/` named `t*.nim` (or the project's task).
   `check` prints the values of both sides when it fails.
 - Name tests by behaviour ("Given…, when…, then…"), test properties (round-trip, idempotence,
   ordering) rather than restating constants, and write the failing test before fixing a bug.
 - Inject time, randomness and I/O as parameters (proc types or objects of closures), so tests do
   not touch the clock, the network or the disk unless they mean to.
-- Fuzz parsers of untrusted input (anything the program does not control: user input, the
-  network, files people edit such as configs): a seeded loop over random byte strings (say 100 000), where
-  every input must give a result or the documented `CatchableError`; any `Defect` fails. Run tests
-  under sanitizers
-  (`-d:useMalloc --passC:-fsanitize=address --passL:-fsanitize=address --debugger:native`).
-  Where the sanitizer cannot run (it fails to build, or a run hangs: give it a timeout), say so
-  with the reason. Code that owns no memory needs nothing in its place; code that does is tested
-  two other ways: build with `-d:useMalloc` so the platform allocator aborts on a double free (on macOS, also run with `MallocScribble=1`).
-  Then, with the default allocator, compare `getOccupiedMem()` before and after a loop of
-  create, move and destroy, at two loop counts (say 2 000 and 20 000). A difference that grows
-  with the count is a leak. A constant one is the runtime's first-use allocation. These ownership
-  tests are for code that owns memory (`ptr`, `alloc`, hooks); for code that does not, say so
-  and skip them. Memory that C allocates (`strdup`, `malloc`) is invisible to `getOccupiedMem`:
-  on macOS run the probe as `leaks --atExit -- ./probe` and expect `0 leaks`. For code whose only
-  memory is what C allocates, `leaks` replaces the two ownership tests above.
 - Outside a project there is no test task: run a test file with `nim c -r tests/tfoo.nim`; it
   imports the module by relative path (`import ../foo`). A directory name that is not a Nim
   identifier goes in quotes: `import "../check-project/foo"`.
-- Test what must not compile. `doAssert not compiles(expr)` works for type errors and a macro's
-  `error`, but not for a forbidden copy: `=copy {.error.}` is reported after `compiles` has
-  answered (and after `nim check` has finished). Put the copy in its own file and expect `nim c` to fail.
 - `runnableExamples` are tests too, and documentation first: a task that asks for no tests
   still gets them, on every public symbol that section 10 says needs one. Show a runtime error with
   `doAssertRaises(IndexDefect): discard b[9]`; `doAssert not compiles(...)` is only for what
   must not compile.
+- Read `details/testing.md` when the code parses untrusted input, owns memory or calls C, or
+  must fail to compile in some use.
 
 ## 12. Performance, in order
 
@@ -676,8 +456,7 @@ func firstOf*(xs: openArray[int]; parity: Parity): Option[int] {.raises: [].} =
 
 - `nim check` clean with `lints/nim.cfg`; tests pass; `beautifulnim check` reports nothing at level warning
   or above, or each report has a reason.
-- Every exported proc, func and iterator has `raises`, even when the task gives the signature
-  without it (an effect list does not change how callers call it); no `except Exception:`, no `except` that only discards.
+- Every exported proc, func and iterator has `raises` (section 0 when the task's signature lacks it); no `except Exception:`, no `except` that only discards.
 - No warnings switched off; no `converter`; no `include`; `method` only for open hierarchies.
 - No public `bool` parameters; enums, `distinct`, `range`, `Option` and object variants carry the
   meaning.

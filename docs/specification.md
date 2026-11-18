@@ -45,9 +45,11 @@ the fix and the guide section.
 
 | ID | Checks |
 |---|---|
-| BN-X1 | every ```` ```nim ```` block in `skills/*/SKILL.md` passes `nim check` on its own under `lints/nim.cfg`, and `nim doc` when it has `runnableExamples` |
+| BN-X1 | every ```` ```nim ```` block in `skills/*/SKILL.md` and `skills/*/details/*.md` passes `nim check` on its own under `lints/nim.cfg`, and `nim doc` when it has `runnableExamples` |
 | BN-X2 | every ```` ```nim ```` block has no beautifulnim findings at level warning or above |
 | BN-X3 | every ```` ```nim bad ```` block parses (it shows a mistake, so it may fail `nim check`) |
+| BN-X4 | `skills/nim-best-practices/SKILL.md` is at most 28 000 characters, so one read holds it (docs/adr/ADR-BNIM-0002) |
+| BN-X5 | each skill's `SKILL.md` names every file in its `details/`, and every `details/*.md` it names exists |
 
 ## Lint configuration (`lints/`)
 

@@ -1,4 +1,5 @@
-## E tests for docs/specification.md: BN-X1..BN-X3 (the guides' code examples are real Nim).
+## E tests for docs/specification.md: BN-X1..BN-X3 (the guides' code examples are real Nim) and
+## BN-X4..BN-X5 (the main guide fits one read and names every details file).
 
 import std/[os, osproc, strutils, unittest]
 import beautifulnim/[analyze, rules]
@@ -12,7 +13,10 @@ type Example = object
   code: string
 
 proc examples(): seq[Example] =
-  for path in walkFiles(root / "skills/*/SKILL.md"):
+  var paths: seq[string]
+  for path in walkFiles(root / "skills/*/SKILL.md"): paths.add path
+  for path in walkFiles(root / "skills/*/details/*.md"): paths.add path
+  for path in paths:
     var cur: Example
     var inside = false
     let lines = readFile(path).splitLines()
@@ -73,3 +77,37 @@ suite "BN-X guide examples":
       let a = analyze(e.code)
       if not a.ok: echo "  ", e.file, ":", e.line, ": ", a.parseErrors
       check a.ok
+
+suite "BN-X guide layout":
+  const guide = root / "skills/nim-best-practices/SKILL.md"
+  const maxGuideChars = 28_000
+
+  test "BN-X4 Given the main guide, when its length is measured, then it is at most 28 000 characters":
+    let n = readFile(guide).len
+    if n > maxGuideChars: echo "  ", guide.relativePath(root), " has ", n, " characters"
+    check n <= maxGuideChars
+
+  test "BN-X5 Given each skill, when its details files are listed, then SKILL.md names each and names no missing one":
+    for skill in walkDirs(root / "skills/*"):
+      let text = readFile(skill / "SKILL.md")
+      for path in walkFiles(skill / "details/*.md"):
+        let name = "details/" & path.extractFilename
+        if name notin text: echo "  ", skill.relativePath(root), " does not name ", name
+        check name in text
+      var start = 0
+      while true:
+        let i = text.find("details/", start)
+        if i < 0: break
+        var j = i + "details/".len
+        while j < text.len and text[j] in {'a'..'z', '0'..'9', '-', '.'}: inc j
+        let name = text[i ..< j].strip(leading = false, chars = {'.'})
+        # A name written as skills/<other>/details/x.md belongs to that other skill.
+        var owner = skill
+        let prefix = text[0 ..< i]
+        let k = prefix.rfind("skills/")
+        if k >= 0 and k + "skills/".len < i and prefix.find({' ', '`', '\n'}, k) < 0:
+          owner = root / prefix[k ..< i].strip(leading = false, chars = {'/'})
+        if name.endsWith(".md"):
+          if not fileExists(owner / name): echo "  ", skill.relativePath(root), " names missing ", name
+          check fileExists(owner / name)
+        start = j

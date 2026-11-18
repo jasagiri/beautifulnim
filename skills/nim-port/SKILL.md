@@ -10,7 +10,9 @@ description: >-
 # Porting to Nim
 
 The goal is Nim that a Nim programmer would have written, with the same observable behaviour as
-the original — not the original's structure in Nim syntax.
+the original — not the original's structure in Nim syntax. Read
+`skills/nim-best-practices/SKILL.md` first; its section 0 decides when the task, the guides or the
+setting disagree.
 
 ## 1. Understand the original
 
@@ -73,13 +75,11 @@ Decide the public types and procs first (guide section 4), then fill them in unt
   --min-level:warning` with nothing to report (or a reason for each).
 - Run both versions on the same inputs where possible and compare outputs byte for byte. List
   the inputs that only one side can take (invalid UTF-8 for a Python `str`, numbers past
-  `int64`), and name the test that covers each. When the original cannot be run, record the
-  comparison as not run with the reason, and mark each behaviour taken only from reading (a
-  runtime limit) as unverified, with the command that would confirm it.
+  `int64`), and name the test that covers each. When the original cannot be run (section 0
+  of the guide), mark each behaviour taken only from reading (a runtime limit) as unverified, with
+  the command that would confirm it.
 
 ## 6. Write PORTING.md
-
-When the task names the notes file, use its name; the contents stay the same.
 
 - API mapping: each original function or type → its Nim counterpart.
 - Test mapping: each original test → its Nim test.

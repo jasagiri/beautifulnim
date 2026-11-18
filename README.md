@@ -6,7 +6,7 @@ compiler settings, and a small checker for the rules a parser can decide. Modell
 
 | Path | What it is |
 |---|---|
-| `skills/nim-best-practices/` | The guide: 13 sections from mindset to a final checklist; source digests in `references/` |
+| `skills/nim-best-practices/` | The guide: section 0 on conflicts with the task, then 13 sections from mindset to a final checklist; parts read only for some code in `details/`; source digests in `references/` |
 | `skills/nim-review/` | Reviewing Nim code: scope, tools first, reading order, a Must / Should / Consider report |
 | `skills/nim-port/` | Porting C, C++, Python, Rust, Go, JavaScript or TypeScript to Nim, tests first |
 | `lints/nim.cfg` | Compiler settings that turn bug-shaped warnings into errors |
