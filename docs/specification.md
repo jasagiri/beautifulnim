@@ -46,9 +46,9 @@ the fix and the guide section.
 
 | ID | Input | Result |
 |---|---|---|
-| BN-T1 | a public proc, func, method, iterator, template, macro or converter declared in the checked file whose parameter's type is `bool` after `var`, `sink`, aliases (`type Flag = bool`) and generic aliases (`type G[T] = bool`) are resolved | BN-02 at the parameter's name. Not reported: `distinct bool`, generic parameters, private routines, routines of imported modules |
+| BN-T1 | a public proc, func, method, iterator, template, macro or converter written in the checked file whose parameter's type is `bool` after `var`, `sink`, aliases (`type Flag = bool`) and generic aliases (`type G[T] = bool`) are resolved | BN-02 at the parameter's name. Not reported: `distinct bool`, generic parameters, private routines, routines of imported modules, routines written in a file the checked file `include`s |
 | BN-T2 | any file that compiles | every other rule is reported as without `--typed`; BN-02 comes only from BN-T1, so a plain `bool` is reported once; findings ordered by line, then column |
-| BN-T3 | a file with `nim.cfg` or `config.nims` beside it or in a parent directory | they apply as they do for `nim check` (search paths, defines); the standard library is that of the Nim the checker was built with |
+| BN-T3 | a file with `nim.cfg` or `config.nims` beside it or in a parent directory | they apply as they do for `nim check` (search paths, defines), to that file only when several files are checked in one run; the standard library is that of the Nim the checker was built with. Compile-time code runs as in `nim check`: `staticExec` and `writeFile` do nothing, and output printed at compile time is not shown |
 | BN-T4 | a `.nims` file | checked as NimScript, as `nim check foo.nims` does (`switch` and the other NimScript procs resolve) |
 | BN-T5 | `analyzeTyped(path)` with a `stdlib` directory that has no `system.nim` (by default `builtWithStdlib`, so after the Nim that built the checker was removed), or a `path` that cannot be read | `ok` is false with one error naming the directory and asking for a rebuild, or with `readError` set and no errors; the compiler is not run. The file is read by `analyzeTyped` itself, so the syntax rules and the compiler see the same file (`tests/test_typed.nim`) |
 

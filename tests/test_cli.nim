@@ -179,3 +179,39 @@ suite "BN-T typed":
     for line in lines:
       check line.contains("broken.nim:1:")
     check lines.deduplicate.len == lines.len
+
+  test "BN-T1 Given a public routine in an included file, when the includer is checked with --typed, then only the include is reported":
+    let dir = work / "included"
+    createDir(dir / "inc")
+    writeFile(dir / "inc" / "part.nim", "proc q*(z: bool) = discard\n")
+    writeFile(dir / "main.nim", "include inc/part\nproc f*(x: int) = q(true)\n")
+    let (output, code) = run("check --typed " & quoteShell(dir / "main.nim"))
+    check code == 1
+    check output.rulesAt == @["1:1 BN-06"]
+
+  test "BN-T3 Given two files in one run where only the first has a nim.cfg define, when checked with --typed, then the define does not reach the second":
+    let a = work / "cfgA"
+    let b = work / "cfgB"
+    createDir(a)
+    createDir(b)
+    writeFile(a / "nim.cfg", "-d:fromA\n")
+    let src = "when defined(fromA):\n  type Flag* = bool\nelse:\n  type Flag* = int\nproc f*(x: Flag) = discard\n"
+    writeFile(a / "a.nim", src)
+    writeFile(b / "b.nim", src)
+    for order in [@[a / "a.nim", b / "b.nim"], @[b / "b.nim", a / "a.nim"]]:
+      let (output, code) = run("check --typed --format:json " & quoteShell(order[0]) & " " & quoteShell(order[1]))
+      check code == 1
+      let j = parseJson(output)
+      for entry in j:
+        let expected = if entry["file"].getStr.endsWith("a.nim"): 1 else: 0
+        check entry["findings"].len == expected
+
+  test "BN-T3 Given static writeFile and staticExec, when checked with --typed, then they do nothing, as in nim check":
+    let marker = work / "marker.txt"
+    removeFile(marker)
+    let f = sample("effects.nim", "static: writeFile(" & marker.escape & ", \"x\")\n" &
+                   "const v = staticExec(\"echo 5\")\nstatic: doAssert v == \"\"\n")
+    let (output, code) = run("check --typed " & quoteShell(f))
+    check code == 0
+    check output.strip == ""
+    check not fileExists(marker)

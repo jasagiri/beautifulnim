@@ -45,3 +45,12 @@ No wildcard is left in a directory part of a pattern.
 
 Found in the session that wrote the above, not in the repository: `nim test | grep | tail` gives
 `tail`'s status. Population in the repository: 0 (CI runs `nim test` with no pipe).
+
+## A finding placed in a file it was not found in (2026-11-19)
+
+Found by review: with `--typed`, a public routine written in an `include`d file was reported with
+its line and column but under the including file's name, pointing at unrelated code.
+
+Population: findings are made in two places. `analyze.nim` reads one source, so every position is
+in that source. `typed.nim` reads symbols of the whole module: the one case. Fixed by keeping only
+symbols written in the checked file (BN-T1); the include itself is BN-06.

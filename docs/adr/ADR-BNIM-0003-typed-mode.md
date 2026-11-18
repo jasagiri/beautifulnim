@@ -50,8 +50,8 @@ Option D, behind an opt-in flag `beautifulnim check --typed` (`src/beautifulnim/
 - The standard library used is `querySetting(libPath)` of the Nim that built the checker: the
   compiler modules compiled in must match it. If that directory is gone, the check stops with a
   message to rebuild; it does not look for another Nim.
-- The compiler's VM registers compile-time procs (`querySetting`, `staticExec`...) only when built
-  with `-d:nimcore`; the package's `nim.cfg` defines it and `typed.nim` refuses to compile
+- The compiler's VM registers the standard library's compile-time procs (`querySetting` and the
+  like) only when built with `-d:nimcore`; the package's `nim.cfg` defines it and `typed.nim` refuses to compile
   without it.
 - `import beautifulnim` does not import `typed.nim`, so embedding the syntax checker stays small.
 
@@ -60,6 +60,13 @@ Option D, behind an opt-in flag `beautifulnim check --typed` (`src/beautifulnim/
 - `nimble install` and `nim test` compile Nim's semantic checker (minutes, not seconds).
 - `--typed` takes as long as `nim check` on the same file, per file.
 - Compiler warnings are not reported by `--typed`; `lints/nim.cfg` and `nim check` own them.
+- `--typed` runs the checked file's compile-time code (macros, `static:` blocks, `config.nims`),
+  as `nim check` does. As in `nim check`, `staticExec`, `gorge`, `writeFile` and the like do nothing
+  at compile time, but `config.nims` runs in full: do not check code you would not compile.
+- Output the checked code prints at compile time (`static: echo`) is not shown.
+- Routines written in a file that the checked file `include`s are not reported: a finding has no
+  file name of its own, and the syntax rules do not read included files either (BN-06 reports the
+  `include`).
 - Ownership rules (copies of types with `=destroy`) are still not checked: they are decided after
   semantic analysis, in the destructor injection pass, which `SemPass` does not run.
 

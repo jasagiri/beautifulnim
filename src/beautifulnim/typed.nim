@@ -56,7 +56,9 @@ proc semCheck(path, stdlib: string; sink: ErrorSink): seq[Finding] =
   prog.initDefinesProg(conf, "beautifulnim")
   prog.processCmdLineAndProjectPath(conf)
   conf.prefixDir = AbsoluteDir(stdlib.parentDir)
-  conf.writelnHook = proc (msg: string) = discard # errors arrive through the hook below
+  # Errors arrive through the hook below. What else the compiler prints (hints, output of
+  # `static: echo`) is not part of the result.
+  conf.writelnHook = proc (msg: string) = discard
   conf.errorMax = high(int) # collect every error, not only the first
   conf.structuredErrorHook = proc (config: ConfigRef; info: TLineInfo; msg: string;
                                    level: Severity) {.closure, gcsafe.} =
@@ -85,8 +87,11 @@ proc semCheck(path, stdlib: string; sink: ErrorSink): seq[Finding] =
     sink.errors.add CompileError(file: path, message: "the compiler did not produce a module")
     return
   for s in graph.allSyms(module):
+    # itemId.module: declared in this module, not re-exported from an import. fileIndex: written in
+    # this file, not in a file it includes; a finding carries only a line and a column, which would
+    # point into the wrong file (the syntax rules do not read included files either).
     if s.kind notin Routines or sfExported notin s.flags or s.itemId.module != module.position or
-        s.typ.isNil or s.typ.n.isNil:
+        s.info.fileIndex != conf.projectMainIdx or s.typ.isNil or s.typ.n.isNil:
       continue
     let params = s.typ.n
     for i in 1 ..< params.len:

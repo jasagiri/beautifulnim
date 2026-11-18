@@ -33,7 +33,9 @@ comments never matches (docs/adr/ADR-BNIM-0001). Exit status: 0 nothing to repor
 `--typed` checks each file as `nim check` does (its `nim.cfg` and `config.nims` apply, imports are
 resolved) and decides BN-02 on the resolved types, so `type Flag = bool` counts as `bool` and
 `distinct bool` does not (docs/adr/ADR-BNIM-0003). It takes as long as `nim check`, and it uses the
-standard library of the Nim that built the checker: rebuild the checker after changing Nim.
+standard library of the Nim that built the checker: rebuild the checker after changing Nim. Like
+`nim check`, it runs the file's compile-time code and its `config.nims`, so check only code you
+would compile.
 
 | ID | Rule | Level |
 |---|---|---|
