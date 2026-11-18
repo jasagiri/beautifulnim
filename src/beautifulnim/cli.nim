@@ -1,17 +1,20 @@
 ## `beautifulnim check [options] <file.nim>...` and `beautifulnim rules` (docs/specification.md, BN-C).
 
 import std/[json, parseopt]
-import ./[analyze, report, rules]
+import ./[analyze, report, rules, typed]
 
 const Usage = """beautifulnim — check Nim source against BeautifulNim's machine-checkable rules
 
 Usage:
-  beautifulnim check [--min-level:error|warning|info] [--format:text|json] <file.nim>...
+  beautifulnim check [--min-level:error|warning|info] [--format:text|json] [--typed] <file.nim>...
   beautifulnim rules
   beautifulnim --help
 
+--typed  check each file as `nim check` does (its nim.cfg and imports apply) and
+         decide BN-02 on the resolved types, so `type Flag = bool` counts as bool
+
 Exit status: 0 no findings at or above the level, 1 findings, 2 usage error,
-unreadable file or a file that is not valid Nim."""
+unreadable file, a file that is not valid Nim or, with --typed, does not compile."""
 
 type Format = enum
   fmText = "text"
@@ -27,7 +30,29 @@ proc listRules(): int =
     echo $id, "  ", $r.level, "  ", r.title, " (", r.section, ")"
   0
 
-proc check(files: seq[string]; minLevel: Level; format: Format): int =
+type Mode = enum
+  modeSyntax ## rules on the syntax tree only (ADR-BNIM-0001)
+  modeTyped  ## BN-02 on resolved types (ADR-BNIM-0003)
+
+proc findingsOf(path, source: string; mode: Mode; status: var int): (bool, seq[Finding]) =
+  ## The findings, or false after printing why the file could not be checked.
+  case mode
+  of modeSyntax:
+    let a = analyze(source)
+    if not a.ok:
+      for e in a.parseErrors:
+        stderr.writeLine path, ":", e.line, ":", e.col, ": not valid Nim: ", e.message
+      status = 2
+    (a.ok, a.findings)
+  of modeTyped:
+    let a = analyzeTyped(path, source)
+    if not a.ok:
+      for e in a.errors:
+        stderr.writeLine e.file, ":", e.line, ":", e.col, ": does not compile: ", e.message
+      status = 2
+    (a.ok, a.findings)
+
+proc check(files: seq[string]; minLevel: Level; format: Format; mode: Mode): int =
   var status = 0
   var reports = newJArray()
   for path in files:
@@ -37,13 +62,9 @@ proc check(files: seq[string]; minLevel: Level; format: Format): int =
         stderr.writeLine path, ": cannot read: ", e.msg
         status = 2
         continue
-    let a = analyze(source)
-    if not a.ok:
-      for e in a.parseErrors:
-        stderr.writeLine path, ":", e.line, ":", e.col, ": not valid Nim: ", e.message
-      status = 2
-      continue
-    let shown = a.findings.atOrAbove(minLevel)
+    let (ok, findings) = findingsOf(path, source, mode, status)
+    if not ok: continue
+    let shown = findings.atOrAbove(minLevel)
     if shown.len > 0 and status == 0: status = 1
     case format
     of fmText:
@@ -60,6 +81,7 @@ proc main(): int =
   var files: seq[string]
   var minLevel = lvInfo
   var format = fmText
+  var mode = modeSyntax
   try:
     for kind, key, val in getopt():
       case kind
@@ -73,6 +95,9 @@ proc main(): int =
           return 0
         of "min-level": minLevel = parseLevel(val)
         of "format": format = parseFormat(val)
+        of "typed":
+          if val.len > 0: raise newException(ValueError, "--typed takes no value; got '" & val & "'")
+          mode = modeTyped
         else: raise newException(ValueError, "unknown option --" & key)
       of cmdEnd: discard
   except ValueError as e:
@@ -84,7 +109,7 @@ proc main(): int =
     if files.len == 0:
       stderr.writeLine "check needs at least one file\n\n", Usage
       2
-    else: check(files, minLevel, format)
+    else: check(files, minLevel, format, mode)
   of "":
     stderr.writeLine Usage
     2

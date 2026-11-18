@@ -28,12 +28,17 @@ beautifulnim rules
 
 It reads code with Nim's own parser (`compiler/parser`, shipped with Nim), so text in strings and
 comments never matches (docs/adr/ADR-BNIM-0001). Exit status: 0 nothing to report, 1 findings,
-2 usage error or a file that is not valid Nim.
+2 usage error, a file that is not valid Nim or, with `--typed`, a file that does not compile.
+
+`--typed` checks each file as `nim check` does (its `nim.cfg` and `config.nims` apply, imports are
+resolved) and decides BN-02 on the resolved types, so `type Flag = bool` counts as `bool` and
+`distinct bool` does not (docs/adr/ADR-BNIM-0003). It takes as long as `nim check`, and it uses the
+standard library of the Nim that built the checker: rebuild the checker after changing Nim.
 
 | ID | Rule | Level |
 |---|---|---|
 | BN-01 | an `except` that only `discard`s | error |
-| BN-02 | a `bool` parameter on a public routine | warning |
+| BN-02 | a `bool` parameter on a public routine (behind an alias too, with `--typed`) | warning |
 | BN-03 | a `converter` | error |
 | BN-04 | warnings or hints switched off by a pragma | error |
 | BN-05 | NEP1 naming (a public `getFoo` getter is info) | warning |
@@ -48,7 +53,8 @@ comments never matches (docs/adr/ADR-BNIM-0001). Exit status: 0 nothing to repor
 reason, `Option` instead of sentinels, effects, concurrency, FFI soundness) is for people and agents
 to judge; `nim-review` says how.
 
-To embed the checker, `import beautifulnim` and add `--path:"$nim"` so that `compiler/` is found:
+To embed the checker, `import beautifulnim` and add `--path:"$nim"` so that `compiler/` is found
+(`import beautifulnim/typed` for `analyzeTyped` also needs `-d:nimcore`):
 
 ```nim
 import beautifulnim
@@ -67,9 +73,11 @@ error it would fail every test that imports unittest. The guide still forbids it
 ## Development
 
 ```sh
-nim test     # rules, the command, every lints/nim.cfg setting, and every example in the guides
+nim test     # rules, the command (with --typed), every lints/nim.cfg setting, and every example in the guides
 nim build
 ```
+
+CI (`.github/workflows/test.yml`) runs `nim test` on Linux, macOS and Windows.
 
 Every ```` ```nim ```` block in the skills must pass `nim check` under `lints/nim.cfg` and have no
 findings at warning or above; ```` ```nim bad ```` blocks show mistakes and only have to parse.

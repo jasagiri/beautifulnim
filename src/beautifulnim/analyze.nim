@@ -42,10 +42,14 @@ const
 proc isIdent(n: PNode; name: string): bool =
   n.kind == nkIdent and cmpIgnoreStyle(n.ident.s, name) == 0
 
-proc add(a: var Analysis; rule: RuleId; n: PNode; level = Rules[rule].level) =
+func initFinding*(rule: RuleId; line, col: int; level = Rules[rule].level): Finding =
+  ## A finding of `rule` at a 1-based place, with the rule's title, fix and section.
   let r = Rules[rule]
-  a.findings.add Finding(rule: rule, level: level, line: int(n.info.line), col: int(n.info.col) + 1,
-                         title: r.title, fix: r.fix, section: r.section)
+  Finding(rule: rule, level: level, line: line, col: col, title: r.title, fix: r.fix,
+          section: r.section)
+
+proc add(a: var Analysis; rule: RuleId; n: PNode; level = Rules[rule].level) =
+  a.findings.add initFinding(rule, int(n.info.line), int(n.info.col) + 1, level)
 
 proc nameNode(n: PNode): PNode =
   ## The identifier inside `name`, `name*`, `name {.p.}` or `name* {.p.}`.
@@ -199,7 +203,7 @@ proc checkRoutine(a: var Analysis; def: PNode) =
     for i in 1 ..< params.len:
       let defs = params[i]
       if defs.kind == nkIdentDefs and isBoolType(defs[^2]):
-        a.add(bn02PublicBoolParam, defs[0])
+        for j in 0 ..< defs.len - 2: a.add(bn02PublicBoolParam, defs[j])
 
 proc checkTypeDef(a: var Analysis; def: PNode) =
   let name = nameNode(def[0])

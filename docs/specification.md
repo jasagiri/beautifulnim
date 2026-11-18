@@ -10,7 +10,7 @@ matches a rule (ADR-BNIM-0001). What the compiler already reports (`object of Ex
 | ID | Reports | Does not report |
 |---|---|---|
 | BN-01 | an `except` branch (bare or typed) whose body is only `discard` | a branch that does anything else (raise, log, return a value) |
-| BN-02 | a public (`*`) proc, func, method, iterator, template or macro with a parameter of type `bool` | private routines; `bool` return types; a `var bool` out-parameter is still reported |
+| BN-02 | a public (`*`) proc, func, method, iterator, template or macro with a parameter of type `bool`, once at each such parameter's name (`a, b: bool` gives two) | private routines; `bool` return types; a `var bool` out-parameter is still reported; a `bool` behind an alias (see BN-T1) |
 | BN-03 | every `converter` definition | — |
 | BN-04 | a pragma that sets `warnings`, `warning[X]`, `hints` or `hint[X]` to `off`, alone or under `push` | the same keys set to `on` |
 | BN-05 | a type name starting lowercase; a routine name starting uppercase or containing `_`; a type name containing `_`; a public routine `getFoo` with one parameter and a return type (level info) | declarations with `importc`, `importcpp`, `importjs` or `exportc` (they keep the foreign name); operators and backticked names |
@@ -39,7 +39,21 @@ the fix and the guide section.
 | BN-C2 | `--min-level:error\|warning\|info` | only findings at that level or above are printed and counted for the exit status |
 | BN-C3 | `--format:json` | a JSON array of `{"file", "findings": [{"rule", "level", "line", "col", "title", "fix", "section"}]}` |
 | BN-C4 | a file that does not parse, or cannot be read | the parser's messages (or the read error) on stderr as `path:line:col: not valid Nim: …`; exit 2 |
-| BN-C5 | no command, an unknown command or option, a bad level, `check` without files | the usage text; exit 2. `beautifulnim rules` lists every rule; exit 0 |
+| BN-C5 | no command, an unknown command or option, a bad level, `check` without files, `--typed` with a value | the usage text; exit 2. `beautifulnim rules` lists every rule; exit 0 |
+| BN-C6 | `check --typed` on a file that parses but does not compile | the compiler's errors on stderr as `path:line:col: does not compile: …` (an error in an imported file names that file); exit 2 |
+
+## Typed check (`src/beautifulnim/typed.nim`, `check --typed`, ADR-BNIM-0003)
+
+| ID | Input | Result |
+|---|---|---|
+| BN-T1 | a public routine declared in the checked file whose parameter's type is `bool` after `var`, `sink`, `lent`, `owned`, aliases and generic instances are skipped | BN-02 at the parameter's name. Not reported: `distinct bool`, generic parameters, private routines, routines of imported modules |
+| BN-T2 | any file that compiles | every other rule is reported as without `--typed`; BN-02 comes only from BN-T1, so a plain `bool` is reported once; findings ordered by line, then column |
+| BN-T3 | a file with `nim.cfg` or `config.nims` beside it or in a parent directory | they apply as they do for `nim check` (search paths, defines); the standard library is that of the Nim the checker was built with |
+
+## Continuous integration (`.github/workflows/test.yml`)
+
+`nim test` runs on Linux, macOS and Windows with Nim 2.4.2. Files are checked out with LF line ends
+(`.gitattributes`), so BN-X4 counts the same characters everywhere.
 
 ## Guide examples (`tests/test_examples.nim`)
 

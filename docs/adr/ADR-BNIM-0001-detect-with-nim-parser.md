@@ -46,3 +46,9 @@ every Nim installation; the package reaches it with `--path:"$nim"`. Nothing is 
 ## Not decided
 
 - Whether to add rules that need name resolution.
+
+## 訂正 (2026-11-19)
+
+- "Not decided: whether to add rules that need name resolution" is decided by ADR-BNIM-0003: BN-02
+  can be decided on resolved types with `beautifulnim check --typed`. Without the flag this ADR
+  still holds, including the consequence that `type Flag = bool` is not reported.

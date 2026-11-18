@@ -33,8 +33,9 @@ suite "BN-01 empty except":
 suite "BN-02 public bool parameter":
   test "Given a public proc with a bool parameter, when analyzed, then BN-02 is reported":
     check reports("proc open*(path: string; create: bool) = discard\n", bn02PublicBoolParam)
-  test "Given grouped parameters a, b: bool on a public func, when analyzed, then BN-02 is reported":
-    check reports("func f*(a, b: bool): int = 0\n", bn02PublicBoolParam)
+  test "Given grouped parameters a, b: bool on a public func, when analyzed, then BN-02 is reported at each name":
+    check reportedAt("func f*(a, b: bool): int = 0\n", bn02PublicBoolParam, 1, 9)
+    check reportedAt("func f*(a, b: bool): int = 0\n", bn02PublicBoolParam, 1, 12)
   test "Given a private proc with a bool parameter, when analyzed, then BN-02 is not reported":
     check not reports("proc open(path: string; create: bool) = discard\n", bn02PublicBoolParam)
   test "Given a public proc returning bool, when analyzed, then BN-02 is not reported":
