@@ -19,8 +19,8 @@ the original — not the original's structure in Nim syntax.
 - Separate behaviour from accident: things that only exist because of the source language (manual
   memory management, a GIL workaround, Python's dict ordering, JavaScript's number type).
 - Bugs are behaviour until told otherwise: keep them, mark them in a test, and list them.
-- Error messages are behaviour when callers or the task read them. Otherwise match the error
-  type and list the message differences in the notes.
+- Error messages are behaviour when callers or the task read them. When the task names only the
+  error type, match the type and list the message differences in the notes.
 
 ## 2. Port the tests first
 
@@ -48,9 +48,9 @@ Decide the public types and procs first (guide section 4), then fill them in unt
 | Python `dict` (insertion order) | `OrderedTable` when order is observable, else `Table` |
 | Python `bytes`, JS `Uint8Array` | `seq[byte]` |
 | JS `number` | `int` or `float` chosen per use; check ranges |
-| Python `int` (unbounded) | `int`, with the bound checked before arithmetic can overflow (overflow raises `OverflowDefect`, not the original's error): saturate just past the bound, or check before multiplying, and keep the original's order of errors |
+| Python `int` (unbounded) | `int`, with the bound checked before arithmetic can overflow (overflow raises `OverflowDefect`, not the original's error): saturate every accumulator (each number and the running total) just past the bound, or check before multiplying, and keep the original's order of errors |
 | Python `str` (code points) | `string` (UTF-8 bytes); `std/unicode` runes where code points matter |
-| Python generator | `iterator`; a closure iterator only when it is stored or passed |
+| Python generator | `iterator`; a closure iterator only when it is stored or passed. Its checks run at the first step, as Python's do at the first `next()` |
 | Go `error` return | raise, or `Opt`/result value; never ignore it |
 | Go goroutines + channels | threads + channels, or async; move data, do not share it |
 | Rust `Result<T, E>` | exceptions with `raises`, or the `results` package if the project uses it |

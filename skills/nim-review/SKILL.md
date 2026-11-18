@@ -26,7 +26,7 @@ report it, that one says what good looks like.
 ## 2. Run the tools first
 
 1. `nim check` on the files with the project's `nim.cfg`, then again with the lines of
-   `lints/nim.cfg` added (with no project `nim.cfg`, `lints/nim.cfg` alone). When the code defines
+   `lints/nim.cfg` added (with no project `nim.cfg`, one run with `lints/nim.cfg` alone). When the code defines
    hooks, also `nim c`: `nim check` does not report a forbidden copy (nim-best-practices
    section 2). Every error is a finding. For a loose file, or a file whose name is not a
    Nim identifier, follow nim-best-practices section 2 (copy, `nim.cfg` next to it, `nim doc` when
@@ -47,7 +47,8 @@ findings the tools caught and which came from reading.
 ## 3. Read, in this order
 
 1. **Correctness and memory safety** — unchecked `Option.get`, object-variant fields read under the
-   wrong `kind`, a collection changed while it is iterated (`del` inside `for … in t`), integer and
+   wrong `kind`, a collection changed while it is iterated (`del` inside `for … in t`;
+   the fix collects the keys first, then deletes), integer and
    range conversions from untrusted input (the fix: parse, check the bounds, then convert;
    nim-best-practices section 5), `cast`/`ptr`/`addr` without a soundness argument, a `cstring` outliving its `string`, missing `=destroy` or double ownership,
    `{.cast(gcsafe).}` hiding a data race, shared state without a lock.
@@ -87,10 +88,14 @@ findings the tools caught and which came from reading.
 ```
 
 - **Must fix**: wrong results, any `Defect` (crash) reachable from external input (valid or not)
-  or from valid state, memory or thread unsafety, swallowed errors, security. A data race or a memory error you can show by
-  reading the code is Must fix even when a probe does not reproduce it: such bugs depend on timing
-  and the allocator. Say whether you reproduced it. Tier by the build the project ships (the
-  default build, checks on, when nothing says otherwise), not `-d:danger`; when `-d:danger` turns the Defect into a silent wrong result, say so in the finding.
+  or from valid state, memory or thread unsafety, swallowed errors, security. Swallowed means a
+  failure the caller needs never reaches it: an `except` that discards (BN-01), or bad input
+  replaced by a default or skipped without a word in the doc comment. A data race or a memory
+  error you can show by reading the code is Must fix even when a probe does not reproduce it:
+  such bugs depend on timing and the allocator. Say whether you reproduced it.
+- Tier by the build the project ships (the default build, checks on, when nothing says
+  otherwise), not `-d:danger`. When `-d:danger` turns the Defect into a silent wrong result, say
+  so in the finding.
 - **Should fix**: API and error-handling rules that will cost callers later.
 - A doc comment that promises behaviour the code lacks is Should fix (section 10), Must fix when
   callers rely on it. When you cannot tell what the author meant, file it under Should fix with

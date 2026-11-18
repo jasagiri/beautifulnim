@@ -416,6 +416,11 @@ macro expect*(cond: untyped): untyped =
   listing one only earns the hint "cannot raise" (`XCannotRaiseY`). Name the Defects a proc raises
   on misuse in its `##` comment. Templates and macros have no effects of their own and take no
   `raises`: their expansion is checked against the routine that calls them.
+- Integer overflow raises `OverflowDefect`. A sum of amounts that come from outside checks
+  before it adds (`if b > 0 and a > high(int64) - b: raise ...`), or the doc comment states the
+  bound the inputs keep.
+- When C returns `NULL` for an allocation (`strdup`, `malloc`), raise `OutOfMemDefect`, as
+  Nim's own allocator does (`OutOfMemError` is deprecated).
 - **Never swallow an error (BN-01).** An `except` whose body is only `discard` hides failures.
   Propagate it, convert it to a value, or log what failed and why. Catch the narrowest type.
 - **Never `except Exception:`** — it also catches `Defect`s, which are bugs. The compiler warns
@@ -485,7 +490,7 @@ doAssert squares(3) == @[0, 1, 4]
   When the specification itself requires a write to stderr, write to `stderr`: the rule is about
   diagnostics nobody specified.
 - Two-space indent, no tabs; lines up to 80 characters (NEP1; the Status guide uses `nph`, which
-  wraps at 88 — follow the project's formatter). Do not align with extra spaces.
+  wraps at 88 — follow the project's formatter; with none, 80). Do not align with extra spaces.
 
 ## 7. Concurrency and async
 
@@ -533,7 +538,8 @@ doAssert squares(3) == @[0, 1, 4]
   and a closure that raises no longer fits. The call sites the task describes still compile; name
   the added list in your notes. Catch `CatchableError` only; a `Defect` is a bug to fix, not an
   error to carry across C. Build such code with `--panics:on`, so a Defect ends the program
-  where it happens instead of unwinding through C. When the C API has
+  where it happens instead of unwinding through C: pass it to `nim c` for the program and for
+  its probes (a project puts it in its `nim.cfg`). When the C API has
   no context argument (`qsort`), keep the context in a `{.threadvar.}`: save the old value, set
   it, call C, then restore the old value, so a nested call from inside the callback works.
 - A C parameter of type `const T*` needs a type that prints as such:
@@ -542,7 +548,8 @@ doAssert squares(3) == @[0, 1, 4]
 - `ptr T` does not index; `ptr UncheckedArray[T]` does. The standard library has no
   pointer-arithmetic module (there is no `std/ptrmath`), and no cast-free way to turn the result
   of `alloc0`, or a pointer C hands you, into an indexable pointer: that one `cast` is the
-  sanctioned form. The exception is a NUL-terminated C string: `for c in mitems(s)` on a
+  sanctioned form, and so is reading the value a C callback's `const void*` points to
+  (`cast[ptr int](a)[]`). The exception is a NUL-terminated C string: `for c in mitems(s)` on a
   `var cstring` writes its bytes with no cast. If you only need
   a growable buffer, a `seq[T]` needs no unsafe code at all; use raw memory only when the task
   requires it.
@@ -582,8 +589,10 @@ doAssert byteLen("abc") == 3
   starts with a `##` paragraph saying what it is for.
 - Put examples in `runnableExamples:` blocks; `nim doc` compiles and runs them, so they stay true.
   The block goes in the routine's body after the `##` lines, never inside the doc comment.
+  Doc comments are RST: a bare `**` (as in `2**31`) is a markup error; write `2^31` or put
+  code in double backquotes.
   Every public template and macro has one, and so does every exported proc whose use is not
-  obvious from its signature (what it raises, what it does at the edges). Trivial getters need none.
+  obvious from its signature (what it raises, what it does at the edges); iterators count as procs. Trivial getters need none.
   A block sees the module's exported symbols but **not the module's imports**: import what the
   example uses (`std/options`, `std/tables`) inside the block, operators included (`in` on
   strings comes from `std/strutils`), as below. When `nim doc` fails on an
@@ -619,7 +628,8 @@ func firstOf*(xs: openArray[int]; parity: Parity): Option[int] {.raises: [].} =
   ordering) rather than restating constants, and write the failing test before fixing a bug.
 - Inject time, randomness and I/O as parameters (proc types or objects of closures), so tests do
   not touch the clock, the network or the disk unless they mean to.
-- Fuzz parsers of untrusted input: a seeded loop over random byte strings (say 100 000), where
+- Fuzz parsers of untrusted input (anything the program does not control: user input, the
+  network, files people edit such as configs): a seeded loop over random byte strings (say 100 000), where
   every input must give a result or the documented `CatchableError`; any `Defect` fails. Run tests
   under sanitizers
   (`-d:useMalloc --passC:-fsanitize=address --passL:-fsanitize=address --debugger:native`).
@@ -636,7 +646,7 @@ func firstOf*(xs: openArray[int]; parity: Parity): Option[int] {.raises: [].} =
   `error`, but not for a forbidden copy: `=copy {.error.}` is reported after `compiles` has
   answered (and after `nim check` has finished). Put the copy in its own file and expect `nim c` to fail.
 - `runnableExamples` are tests too, and documentation first: a task that asks for no tests
-  still gets them on every public symbol. Show a runtime error with
+  still gets them, on every public symbol that section 10 says needs one. Show a runtime error with
   `doAssertRaises(IndexDefect): discard b[9]`; `doAssert not compiles(...)` is only for what
   must not compile.
 
@@ -654,7 +664,8 @@ func firstOf*(xs: openArray[int]; parity: Parity): Option[int] {.raises: [].} =
 
 - `nim check` clean with `lints/nim.cfg`; tests pass; `beautifulnim check` reports nothing at level warning
   or above, or each report has a reason.
-- Every exported proc, func and iterator has `raises`; no `except Exception:`, no `except` that only discards.
+- Every exported proc, func and iterator has `raises`, even when the task gives the signature
+  without it (an effect list does not change how callers call it); no `except Exception:`, no `except` that only discards.
 - No warnings switched off; no `converter`; no `include`; `method` only for open hierarchies.
 - No public `bool` parameters; enums, `distinct`, `range`, `Option` and object variants carry the
   meaning.
