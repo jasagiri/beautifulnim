@@ -542,7 +542,11 @@ doAssert squares(3) == @[0, 1, 4]
   error to carry across C. Build such code with `--panics:on`, so a Defect ends the program
   where it happens instead of unwinding through C: pass it on the command line
   (`nim c --panics:on`) for the program and its probes, and leave the copied `lints/nim.cfg` as
-  it is (a project puts it in its own `nim.cfg`). When the C API has
+  it is (a project puts it in its own `nim.cfg`). A library cannot set its callers' flags: its
+  doc comment says that the callback must not raise a Defect unless the program uses
+  `--panics:on`.
+- A `{.threadvar.}` may hold refs and closures, and a `gcsafe` proc may read it. Calling the
+  closure from a `gcsafe` proc needs `gcsafe` in the closure's type. When the C API has
   no context argument (`qsort`), keep the context in a `{.threadvar.}`: save the old value, set
   it, call C, then restore the old value, so a nested call from inside the callback works.
 - A C parameter of type `const T*` needs a type that prints as such:
@@ -637,8 +641,9 @@ func firstOf*(xs: openArray[int]; parity: Parity): Option[int] {.raises: [].} =
   every input must give a result or the documented `CatchableError`; any `Defect` fails. Run tests
   under sanitizers
   (`-d:useMalloc --passC:-fsanitize=address --passL:-fsanitize=address --debugger:native`).
-  Where the sanitizer cannot run (it fails to build, or a run hangs: give it a timeout), test memory ownership two other ways: build with `-d:useMalloc`
-  so the platform allocator aborts on a double free (on macOS, also run with `MallocScribble=1`).
+  Where the sanitizer cannot run (it fails to build, or a run hangs: give it a timeout), say so
+  with the reason. Code that owns no memory needs nothing in its place; code that does is tested
+  two other ways: build with `-d:useMalloc` so the platform allocator aborts on a double free (on macOS, also run with `MallocScribble=1`).
   Then, with the default allocator, compare `getOccupiedMem()` before and after a loop of
   create, move and destroy, at two loop counts (say 2 000 and 20 000). A difference that grows
   with the count is a leak. A constant one is the runtime's first-use allocation. These ownership

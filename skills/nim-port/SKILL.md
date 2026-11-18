@@ -73,7 +73,9 @@ Decide the public types and procs first (guide section 4), then fill them in unt
   --min-level:warning` with nothing to report (or a reason for each).
 - Run both versions on the same inputs where possible and compare outputs byte for byte. List
   the inputs that only one side can take (invalid UTF-8 for a Python `str`, numbers past
-  `int64`), and name the test that covers each.
+  `int64`), and name the test that covers each. When the original cannot be run, record the
+  comparison as not run with the reason, and mark each behaviour taken only from reading (a
+  runtime limit) as unverified, with the command that would confirm it.
 
 ## 6. Write PORTING.md
 

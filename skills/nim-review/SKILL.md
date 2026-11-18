@@ -107,7 +107,8 @@ findings the tools caught and which came from reading.
   is Should fix.
 - A doc comment that promises behaviour the code lacks is Should fix (section 10), Must fix when
   callers rely on it. When you cannot tell what the author meant, file it under Should fix with
-  the question you need answered, instead of guessing a tier.
+  the question you need answered, instead of guessing a tier. This fallback is for code and doc
+  that disagree; bad input skipped while the doc comment says nothing is swallowed (Must fix).
 - **Consider**: idiom and style; at most a handful, grouped by kind rather than repeated per line.
 - Every finding has a place, a rule and a fix. The rule is a BN ID or the closest section of
   nim-best-practices; when no section covers it, write `Rule: none in the guide` and state the
