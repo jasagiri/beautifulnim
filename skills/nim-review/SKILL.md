@@ -60,7 +60,8 @@ findings the tools caught and which came from reading.
    `{.cast(gcsafe).}` hiding a data race, shared state without a lock.
 2. **Error handling** — `except` that only discards (BN-01), `except Exception:`, exported procs
    without `raises`, exception types inheriting from `Exception`, errors turned into default values,
-   `asyncCheck` on futures that can fail, destructors that raise.
+   `asyncCheck` on futures that can fail, destructors that raise, an `except` for a subtype after
+   one for its parent (it never runs; `skills/nim-best-practices/details/pitfalls.md`).
 3. **API design** — public `bool` parameters (BN-02), sentinels instead of `Option`, `ref` without a
    reason, `seq` parameters that could be `openArray`, `var` out-parameters instead of returned
    tuples, exported symbols that are not API, converters (BN-03), `method` for a closed set (BN-07),

@@ -31,6 +31,20 @@ Part of nim-best-practices section 8. Read it before writing `importc`, a C call
   it, call C, then restore the old value, so a nested call from inside the callback works.
 - A C parameter of type `const T*` needs a type that prints as such:
   `type ConstPtr {.importc: "const void*", nodecl.} = pointer`.
+- An opaque C struct, or one whose fields you declare only in part, takes `incompleteStruct`
+  with `importc` and `header`: Nim then takes the size from C, and `sizeof` at compile time is an
+  error. A struct that a C function takes or returns by value takes `bycopy` (on the type or on
+  the parameter).
+- Bind a proc either through a `header` (the C compiler sees the prototype and the linker finds
+  the symbol) or through `dynlib` (the symbol is loaded at run time), not both: given both,
+  Nim 2.4 writes an `#include` of the library's file name and the C build fails.
+- When the C API takes a context pointer (`void* userdata`) next to the callback, pass the
+  closure through it. Keep the closure in a `ref object`, pin it with `GC_ref` while C may call
+  back, and give C a `{.cdecl, raises: [].}` trampoline that turns the pointer back into the `ref`
+  (`cast[Ctx](ud)`, the sanctioned cast) and calls the closure; `GC_unref` after the last
+  callback. `rawProc` and `rawEnv` split a closure into its two pointers, but the proc part uses
+  Nim's calling convention with the environment as an extra last argument, so it fits only a C
+  signature made for it; the trampoline fits any.
 - When C returns `NULL` for an allocation (`strdup`, `malloc`), raise `OutOfMemDefect`, as
   Nim's own allocator does: `raise newException(OutOfMemDefect, "strdup returned NULL")`
   (`OutOfMemError` is deprecated, and `raiseOutOfMem` is not public).
@@ -76,4 +90,34 @@ proc toCFlags*(flags: set[OpenFlag]): cint =
 
 doAssert toCFlags({}) == 0
 doAssert toCFlags({ofCreate, ofAppend}) == (cCreat or cAppend)
+```
+
+```nim
+{.emit: """
+static int applyTwice(int (*cb)(void*, int), void* ud, int x) {
+  return cb(ud, cb(ud, x));
+}
+""".}
+
+proc cApplyTwice(cb: proc (ud: pointer; x: cint): cint {.cdecl, raises: [].};
+                 ud: pointer; x: cint): cint {.importc: "applyTwice", nodecl.}
+
+type Ctx = ref object
+  f: proc (x: int): int {.raises: [].}
+
+proc trampoline(ud: pointer; x: cint): cint {.cdecl, raises: [].} =
+  let ctx = cast[Ctx](ud) # C hands back the pointer we gave it
+  cint(ctx.f(int(x)))
+
+proc applyTwice*(f: proc (x: int): int {.raises: [].}; x: int): int =
+  ## Calls `f` twice through C.
+  let ctx = Ctx(f: f)
+  GC_ref(ctx)
+  try:
+    result = int(cApplyTwice(trampoline, cast[pointer](ctx), cint(x)))
+  finally:
+    GC_unref(ctx)
+
+let step = 3
+doAssert applyTwice(proc (x: int): int = x + step, 1) == 7
 ```

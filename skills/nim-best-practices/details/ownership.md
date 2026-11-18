@@ -51,6 +51,20 @@ var f = openFd("/dev/null")
 f.close()
 ```
 
+- Hooks belong to the type's module. Defining `=destroy`, `=copy`, `=dup` or `=wasMoved` for a
+  type declared in another module is an error ("can be defined only in the same module with its
+  type").
+- Inside a custom `=dup`, `result = src` is an assignment and calls the type's `=copy`. Build
+  the result field by field (`R(n: src.n)`) when `=copy` must not run there (it counts, or it
+  is forbidden).
+- The compiler moves a value at its last use only where it can see that the use is last: locals
+  and their fields. A field of a `var` parameter is never moved implicitly, because the caller
+  still owns the object. Passing `b.big` to a `sink` parameter copies it, and fails to compile
+  under `=copy {.error.}`; write `move b.big` when moving it out is what you mean (the field is
+  left in its `=wasMoved` state).
+- To see the copies, moves and destroys the compiler inserted into a proc, build with
+  `--expandArc:procName` (the program must call the proc). It prints the proc after the rewrite,
+  with every `=copy` call written out.
 - `{.cursor.}` marks a non-owning `ref` (a parent pointer) to break a cycle without the cycle
   collector. It is a raw pointer with no checks: the target must outlive it.
 - Memory you own directly: allocate in one constructor

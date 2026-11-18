@@ -70,8 +70,9 @@ When you do climb, these hold:
    templates and `genAst`/`quote` bind the symbols visible where they are defined. Exporting it
    would only add to the caller's namespace. Test the expansion from another module to be sure.
 10. **Test the behaviour and the misuse.** Test what the expansion does, as you would a proc. Test
-   rejected input with `doAssert not compiles(...)`. To see an expansion, use `expandMacros` or
-   `echo result.repr` while writing the macro, and remove it before you hand the code back.
+   rejected input with `doAssert not compiles(...)`. To see an expansion, use `expandMacros`,
+   `echo result.repr`, or a build with `--expandMacro:name` (it prints every expansion of that
+   macro) while writing the macro, and remove it before you hand the code back.
 
 ```nim bad
 template sq*(x: int): int = x * x # sq(next()) calls next twice (BN-10); a proc would do

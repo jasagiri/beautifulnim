@@ -80,6 +80,7 @@ off, read the rest by line range before you start.
     nothing calls, so it checks nothing.
   - `beautifulnim check` prints nothing and exits 0 when it finds nothing; add `--format:json` to
     see each file it parsed.
+- Read `details/pitfalls.md` once: code that compiles but does not do what it reads as.
 - Use `lints/nim.cfg` (copy the lines into the project's `nim.cfg`): `--styleCheck:usages`,
   `--styleCheck:error`, and the warnings that point at real bugs as errors (`InheritFromException`,
   `UnusedImport`, `StdPrefix`, `CStringConv`, `EnumConv`, `HoleEnumConv`, `UnsafeDefault`,
