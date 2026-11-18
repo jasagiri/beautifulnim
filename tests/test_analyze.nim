@@ -177,9 +177,12 @@ suite "BN-L lint check files":
       inc seen
     check seen == RuleId.high.ord + 1
   test "BN-L3 Given the package's own src/, when analyzed, then there are no findings":
+    var seen = 0
     for path in walkDirRec(root / "src"):
       if path.endsWith(".nim"):
+        inc seen
         let a = analyze(readFile(path))
         check a.ok
         if a.findings.len > 0: echo "  ", path, ": ", a.findings
         check a.findings.len == 0
+    check seen > 0 # a loop over nothing proves nothing

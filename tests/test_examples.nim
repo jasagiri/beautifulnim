@@ -92,7 +92,9 @@ suite "BN-X guide layout":
     check n <= maxGuideChars
 
   test "BN-X5 Given each skill, when its details files are listed, then SKILL.md names each and names no missing one":
+    var skills = 0
     for skill in walkDirs(root / "skills/*"):
+      inc skills
       let text = readFile(skill / "SKILL.md")
       for path in walkFiles(skill / "details/*.md"):
         let name = "details/" & path.extractFilename
@@ -115,6 +117,7 @@ suite "BN-X guide layout":
           if not fileExists(owner / name): echo "  ", skill.relativePath(root), " names missing ", name
           check fileExists(owner / name)
         start = j
+    check skills > 0 # a loop over nothing proves nothing (a wildcard that matches nothing passes)
 
 suite "BN-X README":
   test "BN-X6 Given the README's nim block, when checked with the package and compiler paths, then it compiles without the semantic checker":
