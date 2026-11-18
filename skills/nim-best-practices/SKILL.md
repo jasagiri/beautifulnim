@@ -283,8 +283,6 @@ how to test them.
 - Integer overflow raises `OverflowDefect`. A sum of amounts that come from outside checks
   before it adds (`if b > 0 and a > high(int64) - b: raise ...`), or the doc comment states the
   bound the inputs keep.
-- When C returns `NULL` for an allocation (`strdup`, `malloc`), raise `OutOfMemDefect`, as
-  Nim's own allocator does (`OutOfMemError` is deprecated).
 - **Never swallow an error (BN-01).** An `except` whose body is only `discard` hides failures.
   Propagate it, convert it to a value, or log what failed and why. Catch the narrowest type.
 - **Never `except Exception:`** — it also catches `Defect`s, which are bugs. The compiler warns

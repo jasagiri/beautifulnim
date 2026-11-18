@@ -31,6 +31,9 @@ Part of nim-best-practices section 8. Read it before writing `importc`, a C call
   it, call C, then restore the old value, so a nested call from inside the callback works.
 - A C parameter of type `const T*` needs a type that prints as such:
   `type ConstPtr {.importc: "const void*", nodecl.} = pointer`.
+- When C returns `NULL` for an allocation (`strdup`, `malloc`), raise `OutOfMemDefect`, as
+  Nim's own allocator does: `raise newException(OutOfMemDefect, "strdup returned NULL")`
+  (`OutOfMemError` is deprecated, and `raiseOutOfMem` is not public).
 - Use `distinct` for handles from C so they cannot be mixed up.
 - `ptr T` does not index; `ptr UncheckedArray[T]` does. The standard library has no
   pointer-arithmetic module (there is no `std/ptrmath`), and no cast-free way to turn the result
