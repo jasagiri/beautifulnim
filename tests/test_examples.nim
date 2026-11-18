@@ -1,5 +1,6 @@
-## E tests for docs/specification.md: BN-X1..BN-X3 (the guides' code examples are real Nim) and
-## BN-X4..BN-X5 (the main guide fits one read and names every details file).
+## E tests for docs/specification.md: BN-X1..BN-X3 (the guides' code examples are real Nim),
+## BN-X4..BN-X5 (the main guide fits one read and names every details file) and BN-X6 (the README's
+## embedding example).
 
 import std/[os, osproc, strutils, unittest]
 import beautifulnim/[analyze, rules]
@@ -114,3 +115,31 @@ suite "BN-X guide layout":
           if not fileExists(owner / name): echo "  ", skill.relativePath(root), " names missing ", name
           check fileExists(owner / name)
         start = j
+
+suite "BN-X README":
+  test "BN-X6 Given the README's nim block, when checked with the package and compiler paths, then it compiles without the semantic checker":
+    var code, inside = false
+    var example = ""
+    for line in readFile(root / "README.md").splitLines:
+      if not inside and line == "```nim":
+        inside = true
+        code = true
+      elif inside and line.startsWith("```"):
+        inside = false
+      elif inside:
+        example.add line & "\n"
+    check code
+    let work = getTempDir() / "beautifulnim-readme"
+    removeDir(work)
+    createDir(work)
+    writeFile(work / "embed.nim", example)
+    let (output, exit) = execCmdEx("nim check --path:" & quoteShell(root / "src") &
+      " --path:" & quoteShell("$nim") & # $nim is Nim's, not the shell's
+      " --hint:all:off --hint:Processing:on --processing:filenames embed.nim",
+      workingDir = work)
+    if exit != 0: echo output
+    check exit == 0
+    let imported = output.replace('\\', '/')
+    check "/compiler/parser.nim" in imported # the syntax checker is there
+    check "/compiler/sem.nim" notin imported # the semantic one is not
+    removeDir(work)
