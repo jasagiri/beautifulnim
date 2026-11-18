@@ -7,8 +7,9 @@ let work = getTempDir() / "beautifulnim-cli"
 let exe = work / "beautifulnim".addFileExt(ExeExt)
 
 proc run(args: string): tuple[output: string, code: int] =
-  let (output, code) =
-    execCmdEx(quoteShell(exe) & " " & args & " 2>&1")
+  ## stderr is merged by execCmdEx itself (poStdErrToStdOut). No `2>&1`: on Windows the command
+  ## does not go through a shell, so it would reach the program as a file name.
+  let (output, code) = execCmdEx(quoteShell(exe) & " " & args)
   (output, code)
 
 proc sample(name, code: string): string =

@@ -1,0 +1,3 @@
+# The guides are measured in characters (BN-X4) and compared line by line; keep LF everywhere,
+# including on Windows checkouts.
+* text=auto eol=lf

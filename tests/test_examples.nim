@@ -13,9 +13,12 @@ type Example = object
   code: string
 
 proc examples(): seq[Example] =
+  # A wildcard only in the last part of the pattern: on Windows a wildcard in a directory part
+  # matches nothing, and every example check would pass on zero examples.
   var paths: seq[string]
-  for path in walkFiles(root / "skills/*/SKILL.md"): paths.add path
-  for path in walkFiles(root / "skills/*/details/*.md"): paths.add path
+  for skill in walkDirs(root / "skills" / "*"):
+    if fileExists(skill / "SKILL.md"): paths.add skill / "SKILL.md"
+    for path in walkFiles(skill / "details" / "*.md"): paths.add path
   for path in paths:
     var cur: Example
     var inside = false
