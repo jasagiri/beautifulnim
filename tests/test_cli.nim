@@ -1,6 +1,6 @@
-## E tests for docs/specification.md: BN-C1..BN-C6 and BN-T1..BN-T3 (the `beautifulnim` command).
+## E tests for docs/specification.md: BN-C1..BN-C6 and BN-T1..BN-T4 (the `beautifulnim` command).
 
-import std/[json, os, osproc, strutils, unittest]
+import std/[json, os, osproc, sequtils, strutils, unittest]
 
 const root = currentSourcePath().parentDir.parentDir
 let work = getTempDir() / "beautifulnim-cli"
@@ -121,3 +121,58 @@ suite "BN-T typed":
     let (output, code) = run("check --typed " & quoteShell(f))
     check code == 2
     check (f & ":1:14: does not compile: type mismatch") in output
+
+  test "BN-T1 Given each kind of public routine, sink and a generic alias, when checked with --typed, then each bool parameter is reported":
+    let f = sample("kinds.nim", "proc s*(x: sink bool) = discard\n" &
+      "template t*(x: bool): untyped = x\n" &
+      "macro m*(x: bool): untyped = discard\n" &
+      "iterator it*(x: bool): int = yield 1\n" &
+      "func fn*(x: bool): int = 0\n" &
+      "type O = object of RootObj\n" &
+      "method me*(o: O; x: bool) {.base.} = discard\n" &
+      "type G[T] = bool\n" &
+      "proc g*(x: G[int]) = discard\n")
+    let (output, code) = run("check --typed " & quoteShell(f))
+    check code == 1
+    check output.rulesAt == @["1:9 BN-02", "2:13 BN-02", "3:10 BN-02", "4:14 BN-02", "5:10 BN-02",
+                              "7:1 BN-07", "7:18 BN-02", "9:9 BN-02"]
+
+  test "BN-T1 Given a bool parameter on a routine of an imported module, when the importer is checked with --typed, then it is not reported":
+    let dir = work / "imported"
+    createDir(dir / "lib")
+    writeFile(dir / "lib" / "other.nim", "proc o*(x: bool) = discard\n")
+    writeFile(dir / "main.nim", "import lib/other\nproc f*(x: int) = o(true)\n")
+    let (output, code) = run("check --typed " & quoteShell(dir / "main.nim"))
+    check code == 0
+    check output.strip == ""
+
+  test "BN-T3 Given a config.nims that defines a symbol, when checked with --typed, then code under that symbol is checked":
+    let dir = work / "withnims"
+    createDir(dir)
+    writeFile(dir / "config.nims", "switch(\"define\", \"fromNims\")\n")
+    writeFile(dir / "main.nim", "when defined(fromNims):\n  type Flag* = bool\nproc f*(x: Flag) = discard\n")
+    let (output, code) = run("check --typed " & quoteShell(dir / "main.nim"))
+    check code == 1
+    check output.rulesAt == @["3:9 BN-02"]
+
+  test "BN-T4 Given a .nims file, when checked with --typed, then it is checked as NimScript":
+    # switch exists only in NimScript, so this compiles only when the file is checked as NimScript
+    let f = sample("script.nims", "type Flag = bool\nproc f*(x: Flag) = discard\nswitch(\"define\", \"x\")\n")
+    let (output, code) = run("check --typed " & quoteShell(f))
+    check code == 1
+    check output.rulesAt == @["2:9 BN-02"]
+
+  test "BN-C6 Given an import that does not compile, when checked with --typed, then the error names the imported file, once":
+    let dir = work / "importerr"
+    createDir(dir / "lib")
+    writeFile(dir / "lib" / "broken.nim", "proc g*() = undefinedThing()\n")
+    writeFile(dir / "main.nim", "import lib/broken\nproc f*() = g()\n")
+    let (output, code) = run("check --typed " & quoteShell(dir / "main.nim"))
+    check code == 2
+    var lines: seq[string]
+    for line in output.splitLines:
+      if "does not compile:" in line: lines.add line
+    check lines.len > 0
+    for line in lines:
+      check line.contains("broken.nim:1:")
+    check lines.deduplicate.len == lines.len

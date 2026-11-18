@@ -45,8 +45,7 @@ Option D, behind an opt-in flag `beautifulnim check --typed` (`src/beautifulnim/
 
 - Without `--typed` nothing changes (ADR-BNIM-0001).
 - With `--typed`, every rule except BN-02 still runs on the syntax tree; BN-02 is decided on the
-  parameter symbols' types with `var`, `sink`, `lent`, `owned`, aliases and generic
-  instances skipped. One finding per parameter, in both modes, so the two modes agree on plain
+  parameter symbols' types with `var`, `sink`, aliases and generic aliases resolved. One finding per parameter, in both modes, so the two modes agree on plain
   `bool`.
 - The standard library used is `querySetting(libPath)` of the Nim that built the checker: the
   compiler modules compiled in must match it. If that directory is gone, the check stops with a

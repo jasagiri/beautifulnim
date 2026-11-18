@@ -45,7 +45,7 @@ proc findingsOf(path, source: string; mode: Mode; status: var int): (bool, seq[F
       status = 2
     (a.ok, a.findings)
   of modeTyped:
-    let a = analyzeTyped(path, source)
+    let a = analyzeTyped(path) # reads the file itself, as the compiler does
     if not a.ok:
       for e in a.errors:
         stderr.writeLine e.file, ":", e.line, ":", e.col, ": does not compile: ", e.message

@@ -6,7 +6,7 @@
 # Not nimble tasks: `test` and `build` clash with nimble's built-in commands.
 
 task test, "E tests":
-  for t in ["test_analyze", "test_cli", "test_lints", "test_examples"]:
+  for t in ["test_analyze", "test_cli", "test_typed", "test_lints", "test_examples"]:
     exec "nim c -r --hints:off tests/" & t & ".nim"
 
 task build, "the beautifulnim command":
