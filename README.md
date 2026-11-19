@@ -33,7 +33,8 @@ comments never matches (docs/adr/ADR-BNIM-0001). Exit status: 0 nothing to repor
 `--typed` checks each file as `nim check` does (its `nim.cfg` and `config.nims` apply, imports are
 resolved) and decides BN-02 on the resolved types, so `type Flag = bool` counts as `bool` and
 `distinct bool` does not (docs/adr/ADR-BNIM-0003). It also reports BN-11, a type with its own
-`=destroy` and no `=copy`, from the hooks the compiler bound to the type (docs/adr/ADR-BNIM-0004), and drops BN-05 findings
+`=destroy` and no `=copy`, from the hooks the compiler bound to the type (docs/adr/ADR-BNIM-0004),
+BN-12, a returned `cstring` of a temporary, local or `sink` string (docs/adr/ADR-BNIM-0006), and drops BN-05 findings
 the symbols show to be wrong: names under `{.push importc.}` or a `{.pragma.}` alias of `importc`, and
 `getFoo` routines whose parameter is not an object or tuple (docs/adr/ADR-BNIM-0005). It takes as long as `nim check`, and it uses the
 standard library of the Nim that built the checker: rebuild the checker after changing Nim. Like
@@ -53,6 +54,7 @@ would compile.
 | BN-09 | code built from a string with `parseStmt`/`parseExpr` | warning |
 | BN-10 | a template argument evaluated more than once (info on private templates) | warning |
 | BN-11 | a type with `=destroy` and no `=copy`, so a copy frees twice (`--typed` only) | error |
+| BN-12 | a returned `cstring` of a string freed on return (`--typed` only) | error |
 
 `object of Exception` is not repeated: the compiler reports it (`InheritFromException`), and
 `lints/nim.cfg` makes that an error. Everything else in the guide (ownership beyond BN-11, `ref` only with a

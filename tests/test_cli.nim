@@ -103,8 +103,12 @@ suite "BN-C command":
     for id in RuleId:
       check $id in output
     for line in output.splitLines:
-      if line.startsWith("BN-11"): check "[check --typed only]" in line
-      elif line.startsWith("BN-"): check "--typed" notin line
+      if not line.startsWith("BN-"): continue
+      var typedOnly = false
+      for r in TypedOnly:
+        if line.startsWith($r & " "): typedOnly = true
+      if typedOnly: check "[check --typed only]" in line
+      else: check "--typed" notin line
 
 suite "BN-T typed":
   # each test compiles its sample with the semantic checker, as `nim check` would

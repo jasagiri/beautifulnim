@@ -17,6 +17,7 @@ type
     bn09CodeFromString = "BN-09"
     bn10RepeatedTemplateArg = "BN-10"
     bn11DestroyWithoutCopy = "BN-11" ## needs the resolved types: reported by `check --typed` only
+    bn12DanglingCstring = "BN-12" ## needs the resolved types: reported by `check --typed` only
 
   Level* = enum
     ## How sure the rule is that the code should change.
@@ -86,9 +87,14 @@ const Rules*: array[RuleId, Rule] = [
     level: lvError,
     section: "3. Values, copies and moves (ARC/ORC)",
     fix: "write =copy right after =destroy: {.error.} for a unique owner, a deep copy for a container (details/ownership.md)"),
+  bn12DanglingCstring: Rule(
+    title: "a returned cstring points into a string that is freed when the routine returns",
+    level: lvError,
+    section: "8. Unsafe code and FFI",
+    fix: "return the string and convert at the call into C, or keep the string alive in the caller or a field (details/ffi.md)"),
 ]
 
-const TypedOnly* = {bn11DestroyWithoutCopy}
+const TypedOnly* = {bn11DestroyWithoutCopy, bn12DanglingCstring}
   ## Rules that need the types the compiler resolves; only `check --typed` (typed.nim) reports them.
 
 proc parseLevel*(s: string): Level {.raises: [ValueError].} =

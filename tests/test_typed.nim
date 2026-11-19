@@ -1,6 +1,6 @@
 ## E tests for docs/specification.md: BN-T5 (analyzeTyped without the standard library it needs)
-## BN-T6 (BN-11, a type with `=destroy` and no `=copy`), BN-T7 (BN-05 on the symbols) and BN-L1 for the
-## rules in TypedOnly.
+## BN-T6 (BN-11, a type with `=destroy` and no `=copy`), BN-T7 (BN-05 on the symbols), BN-T8 (BN-12, a
+## returned cstring whose string is freed on return) and BN-L1 for the rules in TypedOnly.
 
 import std/[os, strutils, unittest]
 import beautifulnim/[rules, typed]
@@ -139,5 +139,44 @@ suite "BN-T7 BN-05 decided on the symbols":
     check bn05("proc getValue*(key: string): string = key\n").len == 0
     check bn05("type Key = string\nproc getValue*(k: Key): string = k\n").len == 0
     check bn05("proc getValue*[T](k: T): T = k\n").len == 0
+
+  removeDir(work)
+
+suite "BN-T8 a returned cstring whose string is freed on return":
+  let work = getTempDir() / "beautifulnim-typed-cstring"
+  removeDir(work)
+  createDir(work)
+
+  proc bn12(source: string): seq[int] =
+    ## The line of each BN-12 finding of `source` with --typed; `source` must compile.
+    let file = work / "c.nim"
+    writeFile(file, source)
+    let a = analyzeTyped(file)
+    if not a.ok: echo "  ", a.errors
+    doAssert a.ok
+    for f in a.findings:
+      if f.rule == bn12DanglingCstring: result.add f.line
+
+  test "Given a cstring of a temporary string returned as the last expression, when checked, then BN-12 is reported":
+    check bn12("proc cname*(s: string): cstring =\n  cstring(s & \"\\0\")\n") == @[2]
+
+  test "Given a routine with a doc comment that returns a cstring of a field joined with another string, when checked, then BN-12 is reported":
+    check bn12("type\n  P = object\n    label: string\nproc cname*(p: P): cstring =\n  ## For C.\n" &
+      "  cstring(p.label & \"\\0\")\n") == @[6]
+
+  test "Given a cstring of a local variable assigned to result, when checked, then BN-12 is reported":
+    check bn12("proc f*(x: int): cstring =\n  let s = \"a\" & $x\n  result = s.cstring\n") == @[3]
+
+  test "Given a cstring of a temporary in a return statement of a private proc, when checked, then BN-12 is reported":
+    check bn12("proc f(x: int): cstring =\n  return cstring($x)\ndiscard f(1)\n") == @[2]
+
+  test "Given a cstring of a sink parameter, when checked, then BN-12 is reported":
+    check bn12("proc f*(s: sink string): cstring =\n  cstring(s)\n") == @[2]
+
+  test "Given a cstring of a parameter, a field of one, a global or a literal, when checked, then BN-12 is not reported":
+    check bn12("proc f*(s: string): cstring =\n  cstring(s)\n").len == 0
+    check bn12("type\n  P = object\n    label: string\nproc f*(p: P): cstring =\n  cstring(p.label)\n").len == 0
+    check bn12("var g = \"abc\"\nproc f*(): cstring =\n  cstring(g)\n").len == 0
+    check bn12("proc f*(): cstring =\n  cstring(\"abc\")\n").len == 0
 
   removeDir(work)

@@ -106,6 +106,36 @@ proc namingVerdict(s: PSym; cache: IdentCache): NamingVerdict =
   let field = cache.getIdent(toLowerAscii(n[3]) & n[4 .. ^1])
   if hasField(s.typ.n[1].sym.typ, field): nvWarn else: nvKeep
 
+proc freedOnReturn(owner: PSym; n: PNode): bool =
+  ## BN-T8: the string `n` does not outlive the routine `owner`: a temporary (the result of a call
+  ## or an operator), a local variable of `owner`, or a `sink` parameter, which `owner` owns. A
+  ## plain parameter and its fields belong to the caller; globals and literals stay.
+  case n.kind
+  of nkCall, nkInfix, nkPrefix, nkPostfix, nkCommand, nkCallStrLit, nkStmtListExpr:
+    true
+  of nkSym:
+    let v = n.sym
+    (v.kind in {skVar, skLet} and v.owner == owner and sfGlobal notin v.flags) or
+      (v.kind == skParam and v.typ != nil and v.typ.kind == tySink)
+  else:
+    false
+
+proc danglingCstrings(owner: PSym; n: PNode; found: var seq[Finding]) =
+  ## BN-T8: each assignment to `result` (also the one a `return x` or a last expression becomes)
+  ## of a `cstring` converted from a string that is freed when `owner` returns.
+  if n.isNil: return
+  if n.kind == nkAsgn and n.len == 2 and n[0].kind == nkSym and n[0].sym.kind == skResult:
+    # A routine with a `##` comment wraps its last expression with the comment (nkStmtListExpr).
+    var rhs = n[1]
+    while rhs.kind in {nkStmtListExpr, nkStmtList} and rhs.len > 0: rhs = rhs[^1]
+    if rhs.kind in {nkConv, nkHiddenStdConv} and rhs.typ != nil and rhs.typ.kind == tyCstring:
+      let src = rhs[^1]
+      if src.typ != nil and src.typ.skipTypes(Transparent).kind == tyString and
+          freedOnReturn(owner, src):
+        found.add initFinding(bn12DanglingCstring, int(rhs.info.line), int(rhs.info.col) + 1)
+  if n.kind notin {nkSym, nkIdent, nkEmpty, nkNilLit, nkType} + nkLiterals:
+    for c in n: danglingCstrings(owner, c, found)
+
 proc semCheck(path, stdlib: string; sink: ErrorSink;
               naming: var seq[(int, int, NamingVerdict)]): seq[Finding] =
   ## Runs the compiler's semantic pass on `path` as the main module and returns a BN-02 finding
@@ -160,6 +190,8 @@ proc semCheck(path, stdlib: string; sink: ErrorSink;
     # point into the wrong file (the syntax rules do not read included files either).
     if s.itemId.module != module.position or s.info.fileIndex != conf.projectMainIdx or s.typ.isNil:
       continue
+    if s.kind in Routines and s.ast != nil and s.ast.len > bodyPos:
+      danglingCstrings(s, s.ast[bodyPos], result)
     if s.kind in Routines + {skType}:
       let v = namingVerdict(s, cache)
       if v != nvKeep: naming.add (int(s.info.line), int(s.info.col) + 1, v)
