@@ -28,13 +28,16 @@ the setting disagree.
 ## 2. Run the tools first
 
 1. `nim check` on the files with the project's `nim.cfg`, then again with the lines of
-   `lints/nim.cfg` added (with no project `nim.cfg`, one run with `lints/nim.cfg` alone). When
-   the code defines hooks, also `nim c`: `nim check` does not report a forbidden copy (nim-best-practices
-   section 2). Every error is a finding. For a loose file, or a file whose name is not a
+   `lints/nim.cfg` added (with no project `nim.cfg`, one run with `lints/nim.cfg` copied as
+   `nim.cfg` next to a copy of the files). When the code defines hooks, also `nim c` a driver that
+   calls every exported routine: `nim check` does not report a forbidden copy, and `nim c` checks
+   only the routines a program calls (nim-best-practices section 2). Every error is a finding. For a loose file, or a file whose name is not a
    Nim identifier, follow nim-best-practices section 2 (copy, `nim.cfg` next to it, `nim doc` when
    it has `runnableExamples`) and say in the summary which copy you checked.
-2. `beautifulnim check --min-level:warning <files>` (the CLI in this repository). Each BN finding
-   is a candidate; confirm it in context before reporting it.
+2. `beautifulnim check --min-level:warning --typed <files>` (the CLI in this repository). `--typed`
+   checks each file as `nim check` does, so a `bool` behind an alias (`type Flag = bool`) counts
+   for BN-02; when the files do not compile yet, drop `--typed` and report the compile errors from
+   step 1. Each BN finding is a candidate; confirm it in context before reporting it.
 3. The project's tests. A failing test is the first finding. If there are none, say so in the
    summary and name the behaviour a test should pin down.
 
@@ -94,8 +97,12 @@ findings the tools caught and which came from reading.
 - <specific things worth keeping, with file:line>
 ```
 
-- **Must fix**: wrong results, any `Defect` (crash) reachable from external input (valid or not)
-  or from valid state, memory or thread unsafety, swallowed errors, security. Swallowed means a
+- **Must fix**: wrong results; a crash reachable from external input (valid or not), from valid
+  state or from a valid call order, whether it is a `Defect` or happens below Nim (a segfault on a
+  `nil` passed to C, C undefined behaviour); memory or thread unsafety; swallowed errors; security;
+  code that does not compile in a build the project ships (a forbidden copy that only `nim c` of a
+  caller shows counts). The fix for a `Defect` a caller's value can reach is to check the value
+  and raise a `CatchableError` (nim-best-practices section 5), not to document the `Defect`. Swallowed means a
   failure the caller needs never reaches it: an `except` that discards (BN-01), or bad input
   replaced by a default or skipped without a word in the doc comment. A data race or a memory
   error you can show by reading the code is Must fix even when a probe does not reproduce it:
@@ -112,7 +119,10 @@ findings the tools caught and which came from reading.
   the question you need answered, instead of guessing a tier. This fallback is for code and doc
   that disagree; bad input skipped while the doc comment says nothing is swallowed (Must fix).
 - **Consider**: idiom and style; at most a handful, grouped by kind rather than repeated per line.
-- Every finding has a place, a rule and a fix. The rule is a BN ID or the closest section of
+- Every finding has a place, a rule and a fix. The fix is a code snippet; when the change is to a
+  doc comment, the snippet is the new comment; when only the author can decide, write the question
+  and a snippet for each answer you would accept. A Consider item that groups several lines names
+  one `file:line` and says "and similar". The rule is a BN ID or the closest section of
   nim-best-practices; when no section covers it, write `Rule: none in the guide` and state the
   mechanism (what fails, under which input). Do not report taste without a rule.
   Where the hard defects live in the guide: copies of a type with `=destroy`, hooks and moves in
