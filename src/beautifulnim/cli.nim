@@ -34,45 +34,57 @@ type Mode = enum
   modeSyntax ## rules on the syntax tree only (ADR-BNIM-0001)
   modeTyped  ## BN-02 on resolved types (ADR-BNIM-0003)
 
-proc cannotRead(path, why: string; status: var int) =
-  stderr.writeLine path, ": cannot read: ", why
-  status = 2
+type CheckError = object
+  ## Why a file could not be checked: printed on stderr, and its JSON entry's "errors".
+  file: string ## the file the message is about (an imported file can differ from the checked one)
+  line, col: int ## 0 when the message has no place
+  kind: string ## "cannot read", "not valid Nim" or "does not compile"
+  message: string
 
-proc findingsOf(path: string; mode: Mode; status: var int): (bool, seq[Finding]) =
-  ## The findings, or false after printing why the file could not be checked. The file is read
-  ## once: here for the syntax rules, by analyzeTyped (which the compiler's reading must match)
-  ## with --typed.
+proc `$`(e: CheckError): string =
+  if e.kind == "cannot read": e.file & ": cannot read: " & e.message
+  else: e.file & ":" & $e.line & ":" & $e.col & ": " & e.kind & ": " & e.message
+
+proc findingsOf(path: string; mode: Mode): (seq[Finding], seq[CheckError]) =
+  ## The findings, or the errors that kept the file from being checked. The file is read once:
+  ## here for the syntax rules, by analyzeTyped (which the compiler's reading must match) with --typed.
   case mode
   of modeSyntax:
     let source =
       try: readFile(path)
       except IOError as e:
-        cannotRead(path, e.msg, status)
-        return (false, @[])
+        return (@[], @[CheckError(file: path, kind: "cannot read", message: e.msg)])
     let a = analyze(source)
-    if not a.ok:
-      for e in a.parseErrors:
-        stderr.writeLine path, ":", e.line, ":", e.col, ": not valid Nim: ", e.message
-      status = 2
-    (a.ok, a.findings)
+    var errors: seq[CheckError]
+    for e in a.parseErrors:
+      errors.add CheckError(file: path, line: e.line, col: e.col, kind: "not valid Nim", message: e.message)
+    doAssert a.ok == (errors.len == 0), "analyze: ok must mean no parse errors"
+    (a.findings, errors)
   of modeTyped:
     let a = analyzeTyped(path)
     if a.readError.len > 0:
-      cannotRead(path, a.readError, status)
-    elif not a.ok:
-      for e in a.errors:
-        # an error the compiler gives no place for (an invalid module name) belongs to the checked file
-        let file = if e.file.len > 0: e.file else: path
-        stderr.writeLine file, ":", e.line, ":", e.col, ": does not compile: ", e.message
-      status = 2
-    (a.ok, a.findings)
+      return (@[], @[CheckError(file: path, kind: "cannot read", message: a.readError)])
+    var errors: seq[CheckError]
+    for e in a.errors:
+      # an error the compiler gives no place for (an invalid module name) belongs to the checked file
+      let file = if e.file.len > 0: e.file else: path
+      errors.add CheckError(file: file, line: e.line, col: e.col, kind: "does not compile", message: e.message)
+    doAssert a.ok == (errors.len == 0), "analyzeTyped: ok must mean no errors"
+    (a.findings, errors)
 
 proc check(files: seq[string]; minLevel: Level; format: Format; mode: Mode): int =
   var status = 0
   var reports = newJArray()
   for path in files:
-    let (ok, findings) = findingsOf(path, mode, status)
-    if not ok: continue
+    let (findings, errors) = findingsOf(path, mode)
+    if errors.len > 0:
+      status = 2
+      var items = newJArray()
+      for e in errors:
+        stderr.writeLine $e
+        items.add %*{"file": e.file, "line": e.line, "col": e.col, "kind": e.kind, "message": e.message}
+      if format == fmJson: reports.add %*{"file": path, "errors": items}
+      continue
     let shown = findings.atOrAbove(minLevel)
     if shown.len > 0 and status == 0: status = 1
     case format

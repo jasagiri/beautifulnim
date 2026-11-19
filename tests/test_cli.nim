@@ -1,6 +1,6 @@
 ## E tests for docs/specification.md: BN-C1..BN-C6 and BN-T1..BN-T4 (the `beautifulnim` command).
 
-import std/[json, os, osproc, sequtils, strutils, unittest]
+import std/[json, os, osproc, sequtils, streams, strutils, unittest]
 
 const root = currentSourcePath().parentDir.parentDir
 let work = getTempDir() / "beautifulnim-cli"
@@ -51,6 +51,31 @@ suite "BN-C command":
     check j[0]["file"].getStr == f
     check j[0]["findings"][0]["rule"].getStr == "BN-03"
     check j[0]["findings"][0]["line"].getInt == 1
+
+  test "BN-C3 Given --format:json and a file that cannot be checked, when checked, then its entry has errors and no findings":
+    # stdout alone is parsed: the messages also go to stderr, as in text mode.
+    let good = sample("conv3.nim", "converter c(x: float): int = int(x)\n")
+    let broken = sample("broken3.nim", "proc f(\n")
+    let missing = work / "nope3.nim"
+    for extra in ["", "--typed "]:
+      let p = startProcess(exe, args = @["check", "--format:json"] &
+        (if extra.len > 0: @["--typed"] else: @[]) & @[good, broken, missing],
+        options = {}) # not poStdErrToStdOut, the default: stdout must be the JSON alone
+      let stdoutText = p.outputStream.readAll
+      let stderrText = p.errorStream.readAll
+      let code = p.waitForExit
+      p.close
+      check code == 2
+      let j = parseJson(stdoutText)
+      check j.len == 3
+      check j[0]["file"].getStr == good and j[0]["findings"].len == 1 and not j[0].hasKey("errors")
+      check j[1]["file"].getStr == broken and not j[1].hasKey("findings")
+      check j[1]["errors"].len > 0
+      check j[1]["errors"][0]["kind"].getStr in ["not valid Nim", "does not compile"]
+      check j[1]["errors"][0]["file"].getStr == broken
+      check j[2]["file"].getStr == missing and not j[2].hasKey("findings")
+      check j[2]["errors"][0]["kind"].getStr == "cannot read"
+      check (broken & ":") in stderrText and (missing & ": cannot read: ") in stderrText
 
   test "BN-C4 Given a file that is not valid Nim, when checked, then the parser's message is printed and the exit is 2":
     let f = sample("broken.nim", "proc f(\n")
