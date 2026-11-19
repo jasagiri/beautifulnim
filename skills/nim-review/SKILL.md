@@ -84,7 +84,8 @@ findings the tools caught and which came from reading.
 
 ```text
 ## Summary
-<scope, library or application, Nim version, tools run and their exit codes>
+<scope, library or application, Nim version (one line, from `nim -v`), and each command that
+checks something (nim check, beautifulnim, a build, a test, a probe, a sanitizer run) with its exit code>
 
 ## Must fix
 - <file>:<line> — <what is wrong and what it causes>. Rule: <guide section or BN-NN>.
@@ -104,8 +105,11 @@ findings the tools caught and which came from reading.
   state or from a valid call order, whether it is a `Defect` or happens below Nim (a segfault on a
   `nil` passed to C, C undefined behaviour); memory or thread unsafety; swallowed errors; security;
   code that does not compile in a build the project ships (a forbidden copy that only `nim c` of a
-  caller shows counts). The fix for a `Defect` a caller's value can reach is to check the value
-  and raise a `CatchableError` (nim-best-practices section 5), not to document the `Defect`. Swallowed means a
+  caller shows counts). The fix for a `Defect` that external input can reach, or a value the
+  caller cannot check before the call (a sum that overflows), is to check the value and raise a
+  `CatchableError` (nim-best-practices section 5), not to document the `Defect`. A precondition
+  the caller can check (an index below `len`) may stay a `Defect` named in the `##` comment, as
+  built-in indexing and `skills/nim-best-practices/details/ownership.md` do; a missing check or a missing `##` line is the finding then. Swallowed means a
   failure the caller needs never reaches it: an `except` that discards (BN-01), or bad input
   replaced by a default or skipped without a word in the doc comment. A data race or a memory
   error you can show by reading the code is Must fix even when a probe does not reproduce it:
@@ -124,7 +128,8 @@ findings the tools caught and which came from reading.
 - **Consider**: idiom and style; at most a handful, grouped by kind rather than repeated per line.
 - Every finding has a place, a rule and a fix. The fix is a code snippet; when the change is to a
   doc comment, the snippet is the new comment; when only the author can decide, write the question
-  and a snippet for each answer you would accept. A Consider item that groups several lines names
+  and a snippet for each answer you would accept; when the change is not code (tests to add, a
+  config to adopt), the snippet is that text: a test's name and its check, the config line. A Consider item that groups several lines names
   one `file:line` and says "and similar". The rule is a BN ID or the closest section of
   nim-best-practices; when no section covers it, write `Rule: none in the guide` and state the
   mechanism (what fails, under which input). Do not report taste without a rule.
