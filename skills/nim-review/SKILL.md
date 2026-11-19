@@ -20,7 +20,9 @@ the setting disagree.
   they touch, not the whole repository).
 - Library or application (section 1 of the guide): libraries are held to the API rules, effect
   annotations and no global state; applications to clarity and error reporting. A module inside
-  a service is application code, unless other packages import it.
+  a service is application code, unless other packages import it. With no project, the file is a
+  project of one (nim-best-practices section 0): library rules when the request says other code
+  imports it, application rules otherwise, tiered by the default build (section 4).
 - Nim version and memory manager (`nim -v`, the `requires "nim >= …"` line, `--mm`), and the
   project's own conventions (constructor style `initFoo` vs `Foo.init`, `results` vs exceptions,
   `asyncdispatch` vs `chronos`, formatter). Judge by those, and say where they differ from the guide.
@@ -31,13 +33,14 @@ the setting disagree.
    `lints/nim.cfg` added (with no project `nim.cfg`, one run with `lints/nim.cfg` copied as
    `nim.cfg` next to a copy of the files). When the code defines hooks, also `nim c` a driver that
    calls every exported routine: `nim check` does not report a forbidden copy, and `nim c` checks
-   only the routines a program calls (nim-best-practices section 2). Every error is a finding. For a loose file, or a file whose name is not a
+   only the routines a program calls, so `nim c` of the module alone checks none (nim-best-practices section 2). Every error is a finding. For a loose file, or a file whose name is not a
    Nim identifier, follow nim-best-practices section 2 (copy, `nim.cfg` next to it, `nim doc` when
    it has `runnableExamples`) and say in the summary which copy you checked.
 2. `beautifulnim check --min-level:warning --typed <files>` (the CLI in this repository). `--typed`
    checks each file as `nim check` does, so a `bool` behind an alias (`type Flag = bool`) counts
    for BN-02; when the files do not compile yet, drop `--typed` and report the compile errors from
-   step 1. Each BN finding is a candidate; confirm it in context before reporting it.
+   step 1. Report the `--typed` run; a run without it misses those aliases. Each BN finding is a candidate;
+   confirm it in context before reporting it.
 3. The project's tests. A failing test is the first finding. If there are none, say so in the
    summary and name the behaviour a test should pin down.
 
@@ -112,8 +115,8 @@ findings the tools caught and which came from reading.
   so in the finding.
 - **Should fix**: API and error-handling rules that will cost callers later.
 - A `raises` list does not track Defects, so `raises: []` on a proc that can hit one is legal:
-  the finding is the reachable Defect, not the annotation. A missing `##` on an exported symbol
-  is Should fix.
+  the finding is the reachable Defect, not the annotation. A missing `##` or a missing `raises` list
+  on an exported routine is Should fix.
 - A doc comment that promises behaviour the code lacks is Should fix (section 10), Must fix when
   callers rely on it. When you cannot tell what the author meant, file it under Should fix with
   the question you need answered, instead of guessing a tier. This fallback is for code and doc

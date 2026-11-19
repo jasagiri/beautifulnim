@@ -19,12 +19,12 @@ Part of nim-best-practices section 8. Read it before writing `importc`, a C call
   type without it: under `{.push raises: [].}` a proc type without one also means `raises: []`,
   and a closure that raises no longer fits (section 0 allows adding the list to the task's
   signature); name it in your notes. Catch `CatchableError` only; a `Defect` is a bug to fix, not an
-  error to carry across C. Build such code with `--panics:on`, so a Defect ends the program
-  where it happens instead of unwinding through C: pass it on the command line
-  (`nim c --panics:on`) for the program and its probes, and leave the copied `lints/nim.cfg` as
-  it is (a project puts it in its own `nim.cfg`). A library cannot set its callers' flags: its
-  doc comment says that the callback must not raise a Defect unless the program uses
-  `--panics:on`.
+  error to carry across C. A Defect must not unwind through C either, and `--panics:on` makes it end the
+  program where it happens. Who sets it depends on what you write: a library cannot set its
+  callers' flags, so the doc comment of the exported routine says that a Defect raised by the
+  callback needs `--panics:on`; a program, and every probe or test you build, passes it on the
+  command line (`nim c --panics:on`), leaving the copied `lints/nim.cfg` as it is (a project puts
+  it in its own `nim.cfg`).
 - A `{.threadvar.}` may hold refs and closures, and a `gcsafe` proc may read it. Calling the
   closure from a `gcsafe` proc needs `gcsafe` in the closure's type. When the C API has
   no context argument (`qsort`), keep the context in a `{.threadvar.}`: save the old value, set

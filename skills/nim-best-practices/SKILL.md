@@ -33,7 +33,7 @@ off, read the rest by line range before you start.
   and go on.
 - **No project**: treat the file as a project of one: a copy of `lints/nim.cfg` next to it
   (section 2), tests in `tests/` beside it run with `nim c -r` (section 11), probes in a
-  directory of their own.
+  directory of their own, importing the module as `../<module>`.
 - **Details**: read the `details/` file a section names before writing that kind of code;
   `details/ffi.md` before `importc`, a C callback, `cast` or `ptr`.
 
@@ -447,7 +447,8 @@ func firstOf*(xs: openArray[int]; parity: Parity): Option[int] {.raises: [].} =
 2. Preallocate: `newSeqOfCap`, `newStringOfCap`, `setLen`, `initTable(n)`.
 3. Avoid copies: `sink`/`lent`, `openArray` parameters, `move` where the compiler cannot see it.
 4. Avoid allocations: value objects over `ref`, reuse buffers the caller passes in.
-5. Use `--mm:arc` when the program has no cycles, and link-time optimisation (`--passC:-flto
+5. After measuring, a program with no cycles may switch to `--mm:arc` (orc stays the default),
+   and link-time optimisation (`--passC:-flto
    --passL:-flto`) rather than `{.inline.}` everywhere (Status).
 6. Never ship `-d:danger` as the default build; it removes the checks that turn bugs into errors.
 
