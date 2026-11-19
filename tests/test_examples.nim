@@ -84,12 +84,12 @@ suite "BN-X guide examples":
 
 suite "BN-X guide layout":
   const guide = root / "skills/nim-best-practices/SKILL.md"
-  const maxGuideChars = 28_000
+  const maxGuideBytes = 28_000 # bytes, never fewer than characters: within this, one read holds it
 
-  test "BN-X4 Given the main guide, when its length is measured, then it is at most 28 000 characters":
+  test "BN-X4 Given the main guide, when its length is measured, then it is at most 28 000 bytes":
     let n = readFile(guide).len
-    if n > maxGuideChars: echo "  ", guide.relativePath(root), " has ", n, " characters"
-    check n <= maxGuideChars
+    if n > maxGuideBytes: echo "  ", guide.relativePath(root), " has ", n, " bytes"
+    check n <= maxGuideBytes
 
   test "BN-X5 Given each skill, when its details files are listed, then SKILL.md names each and names no missing one":
     var skills = 0

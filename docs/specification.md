@@ -55,7 +55,7 @@ the fix and the guide section.
 ## Continuous integration (`.github/workflows/test.yml`)
 
 `nim test` runs on Linux, macOS and Windows with Nim 2.4.2. Files are checked out with LF line ends
-(`.gitattributes`), so BN-X4 counts the same characters everywhere.
+(`.gitattributes`), so BN-X4 counts the same bytes everywhere.
 
 ## Guide examples (`tests/test_examples.nim`)
 
@@ -64,7 +64,7 @@ the fix and the guide section.
 | BN-X1 | every ```` ```nim ```` block in `skills/*/SKILL.md` and `skills/*/details/*.md` passes `nim check` on its own under `lints/nim.cfg`, and `nim doc` when it has `runnableExamples` |
 | BN-X2 | every ```` ```nim ```` block has no beautifulnim findings at level warning or above |
 | BN-X3 | every ```` ```nim bad ```` block parses (it shows a mistake, so it may fail `nim check`) |
-| BN-X4 | `skills/nim-best-practices/SKILL.md` is at most 28 000 characters, so one read holds it (docs/adr/ADR-BNIM-0002) |
+| BN-X4 | `skills/nim-best-practices/SKILL.md` is at most 28 000 bytes, so at most 28 000 characters and one read holds it (docs/adr/ADR-BNIM-0002) |
 | BN-X5 | each skill's `SKILL.md` names every file in its `details/`, and every `details/*.md` it names exists |
 | BN-X6 | the ```` ```nim ```` block in `README.md` (embedding the checker) passes `nim check` with `--path:src --path:"$nim"`, and `import beautifulnim` does not import `compiler/sem.nim` |
 

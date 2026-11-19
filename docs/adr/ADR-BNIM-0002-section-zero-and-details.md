@@ -77,3 +77,7 @@ regression when parts move out of the main file (risk).
 - Whether `nim-review` and `nim-port` get details files of their own; they are under 9 000
   characters each.
 - The trial tasks and harness live outside this repository; whether to publish them.
+
+## 訂正 (2026-11-19)
+
+- BN-X4 は文字でなくバイトを数えている (`readFile(guide).len`)。バイト数は文字数を下回らないので、28 000 バイト以内なら 28 000 文字以内で、「一度の読みに収まる」という保証は保たれる。仕様書と試験名をバイトに合わせた。本文の「28 000 characters」は上限の意図として残す。
