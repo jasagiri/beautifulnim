@@ -1,6 +1,7 @@
 ## E tests for docs/specification.md: BN-C1..BN-C6 and BN-T1..BN-T4 (the `beautifulnim` command).
 
 import std/[json, os, osproc, sequtils, streams, strutils, unittest]
+import beautifulnim/rules
 
 const root = currentSourcePath().parentDir.parentDir
 let work = getTempDir() / "beautifulnim-cli"
@@ -99,8 +100,11 @@ suite "BN-C command":
   test "BN-C5 Given rules, when run, then every rule is listed and the exit is 0":
     let (output, code) = run("rules")
     check code == 0
-    for id in ["BN-01", "BN-02", "BN-03", "BN-04", "BN-05", "BN-06", "BN-07"]:
-      check id in output
+    for id in RuleId:
+      check $id in output
+    for line in output.splitLines:
+      if line.startsWith("BN-11"): check "[check --typed only]" in line
+      elif line.startsWith("BN-"): check "--typed" notin line
 
 suite "BN-T typed":
   # each test compiles its sample with the semantic checker, as `nim check` would

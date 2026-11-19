@@ -19,6 +19,7 @@ matches a rule (ADR-BNIM-0001). What the compiler already reports (`object of Ex
 | BN-08 | a `template` with the `{.dirty.}` pragma | templates that mark single names `{.inject.}` |
 | BN-09 | a call of `parseStmt` or `parseExpr`, plain, qualified (`macros.parseStmt`) or as a method call (`"…".parseExpr`), reported once | trees built with `quote` or `genAst` |
 | BN-10 | a template parameter evaluated more than once in one run through the body: level warning on a public template, info on a private one | parameters of type `typedesc`, `static[T]` or `var T`; a parameter the body declares as a name (`var x`); uses in different branches of `if`/`case`/`when` (the costliest branch counts, with the conditions of the `if` branches before it; `case` `of` values and `when` conditions do not count); uses inside `typeof`, `type`, `compiles`, `declared`, `defined`, `sizeof`, `alignof`, `astToStr`, `is`, `isnot`, `runnableExamples`, `bind`, `mixin`; a name after a dot or before `:`/`=` in a constructor or named argument; procs |
+| BN-11 | with `check --typed` only (BN-T6): a type that has its own `=destroy` and no `=copy` of its own | see BN-T6 |
 
 Each finding carries the rule ID, level, 1-based line and column of the node, the rule's title,
 the fix and the guide section.
@@ -39,18 +40,19 @@ the fix and the guide section.
 | BN-C2 | `--min-level:error\|warning\|info` | only findings at that level or above are printed and counted for the exit status |
 | BN-C3 | `--format:json` | a JSON array with one entry per file, in order: `{"file", "findings": [{"rule", "level", "line", "col", "title", "fix", "section"}]}`, or, for a file that could not be checked (BN-C4, BN-C6), `{"file", "errors": [{"file", "line", "col", "kind", "message"}]}` with no `"findings"`, `kind` being `cannot read`, `not valid Nim` or `does not compile`; the messages also go to stderr and the exit is 2 |
 | BN-C4 | a file that does not parse, or cannot be read (with or without `--typed`) | the parser's messages on stderr as `path:line:col: not valid Nim: …`, or `path: cannot read: …`; exit 2 |
-| BN-C5 | no command, an unknown command or option, a bad level, `check` without files, `--typed` with a value | the usage text; exit 2. `beautifulnim rules` lists every rule; exit 0 |
+| BN-C5 | no command, an unknown command or option, a bad level, `check` without files, `--typed` with a value | the usage text; exit 2. `beautifulnim rules` lists every rule, marking those in `TypedOnly` `[check --typed only]`; exit 0 |
 | BN-C6 | `check --typed` on a file that parses but does not compile, or imports one that does not | the compiler's errors on stderr as `path:line:col: does not compile: …`, each once (an error in an imported file names that file; an error with no place names the checked file, with line and column 0); exit 2 |
 
-## Typed check (`src/beautifulnim/typed.nim`, `check --typed`, ADR-BNIM-0003)
+## Typed check (`src/beautifulnim/typed.nim`, `check --typed`, ADR-BNIM-0003, ADR-BNIM-0004)
 
 | ID | Input | Result |
 |---|---|---|
 | BN-T1 | a public proc, func, method, iterator, template, macro or converter written in the checked file whose parameter's type is `bool` after `var`, `sink`, aliases (`type Flag = bool`) and generic aliases (`type G[T] = bool`) are resolved | BN-02 at the parameter's name. Not reported: `distinct bool`, generic parameters, private routines, routines of imported modules, routines written in a file the checked file `include`s |
-| BN-T2 | any file that compiles | every other rule is reported as without `--typed`; BN-02 comes only from BN-T1, so a plain `bool` is reported once; findings ordered by line, then column |
+| BN-T2 | any file that compiles | every other rule is reported as without `--typed`; BN-02 comes only from BN-T1, so a plain `bool` is reported once, and BN-11 only from BN-T6; findings ordered by line, then column |
 | BN-T3 | a file with `nim.cfg` or `config.nims` beside it or in a parent directory | they apply as they do for `nim check` (search paths, defines), to that file only when several files are checked in one run; the standard library is that of the Nim the checker was built with. Compile-time code runs as in `nim check`: `staticExec` and `writeFile` do nothing, and output printed at compile time is not shown |
 | BN-T4 | a `.nims` file | checked as NimScript, as `nim check foo.nims` does (`switch` and the other NimScript procs resolve) |
 | BN-T5 | `analyzeTyped(path)` with a `stdlib` directory that has no `system.nim` (by default `builtWithStdlib`, so after the Nim that built the checker was removed), or a `path` that cannot be read | `ok` is false with one error naming the directory and asking for a rebuild, or with `readError` set and no errors; the compiler is not run. The file is read by `analyzeTyped` itself, so the syntax rules and the compiler see the same file (`tests/test_typed.nim`) |
+| BN-T6 | a type declared in the checked file (public or private, generic or not) whose `=destroy` was written by the user (`sfOverridden`) and whose `=copy` was not; a `=dup` alone does not count, since assigning to an existing variable still calls `=copy` | BN-11 at the type's name. Not reported: a user `=copy`, deep or `{.error.}`; types without a user `=destroy`, also when a field's type has hooks of its own; types of imported modules or of files the checked file `include`s. Where a copy happens is not reported: with `=copy {.error.}`, `nim c` names each place, while `nim check` does not, since it stops before destructor injection (ADR-BNIM-0004) |
 
 ## Continuous integration (`.github/workflows/test.yml`)
 
@@ -72,6 +74,6 @@ the fix and the guide section.
 
 | ID | Checks |
 |---|---|
-| BN-L1 | each `lints/check/bn_NN.nim` produces at least one finding of rule BN-NN |
+| BN-L1 | there is one `lints/check/bn_NN.nim` per rule, and each produces at least one finding of rule BN-NN: with `analyze` for the syntax rules, with `analyzeTyped` for the rules in `TypedOnly` (`tests/test_typed.nim`) |
 | BN-L2 | each `lints/check/cfg_<name>.nim` fails `nim check` under `lints/nim.cfg` and passes without it |
 | BN-L3 | the package's own `src/` has no findings |

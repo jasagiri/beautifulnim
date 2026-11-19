@@ -32,7 +32,8 @@ comments never matches (docs/adr/ADR-BNIM-0001). Exit status: 0 nothing to repor
 
 `--typed` checks each file as `nim check` does (its `nim.cfg` and `config.nims` apply, imports are
 resolved) and decides BN-02 on the resolved types, so `type Flag = bool` counts as `bool` and
-`distinct bool` does not (docs/adr/ADR-BNIM-0003). It takes as long as `nim check`, and it uses the
+`distinct bool` does not (docs/adr/ADR-BNIM-0003). It also reports BN-11, a type with its own
+`=destroy` and no `=copy`, from the hooks the compiler bound to the type (docs/adr/ADR-BNIM-0004). It takes as long as `nim check`, and it uses the
 standard library of the Nim that built the checker: rebuild the checker after changing Nim. Like
 `nim check`, it runs the file's compile-time code and its `config.nims`, so check only code you
 would compile.
@@ -49,9 +50,10 @@ would compile.
 | BN-08 | a `{.dirty.}` template (hygiene off) | warning |
 | BN-09 | code built from a string with `parseStmt`/`parseExpr` | warning |
 | BN-10 | a template argument evaluated more than once (info on private templates) | warning |
+| BN-11 | a type with `=destroy` and no `=copy`, so a copy frees twice (`--typed` only) | error |
 
 `object of Exception` is not repeated: the compiler reports it (`InheritFromException`), and
-`lints/nim.cfg` makes that an error. Everything else in the guide (ownership, `ref` only with a
+`lints/nim.cfg` makes that an error. Everything else in the guide (ownership beyond BN-11, `ref` only with a
 reason, `Option` instead of sentinels, effects, concurrency, FFI soundness) is for people and agents
 to judge; `nim-review` says how.
 

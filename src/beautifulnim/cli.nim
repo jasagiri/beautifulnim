@@ -27,7 +27,8 @@ proc parseFormat(s: string): Format {.raises: [ValueError].} =
 
 proc listRules(): int =
   for id, r in Rules:
-    echo $id, "  ", $r.level, "  ", r.title, " (", r.section, ")"
+    let typedOnly = if id in TypedOnly: "  [check --typed only]" else: ""
+    echo $id, "  ", $r.level, "  ", r.title, " (", r.section, ")", typedOnly
   0
 
 type Mode = enum

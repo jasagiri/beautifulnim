@@ -79,3 +79,7 @@ Option D, behind an opt-in flag `beautifulnim check --typed` (`src/beautifulnim/
 
 - Making `--typed` the default: it would make every check as slow as `nim check` and fail on files
   that do not compile yet, which the syntax rules can still check.
+
+## 訂正 (2026-11-19)
+
+- "Ownership rules … are still not checked" holds for where a copy happens. Whether a type has a user `=copy` next to its `=destroy` is known after `SemPass` and is now checked by BN-11 (ADR-BNIM-0004).

@@ -16,6 +16,7 @@ type
     bn08DirtyTemplate = "BN-08"
     bn09CodeFromString = "BN-09"
     bn10RepeatedTemplateArg = "BN-10"
+    bn11DestroyWithoutCopy = "BN-11" ## needs the resolved types: reported by `check --typed` only
 
   Level* = enum
     ## How sure the rule is that the code should change.
@@ -80,7 +81,15 @@ const Rules*: array[RuleId, Rule] = [
     level: lvWarning,
     section: "4. Types and API design / Templates and macros",
     fix: "make it a proc if it can be one; otherwise bind the argument once (let v = x) and use v, since a template pastes the argument, not its value"),
+  bn11DestroyWithoutCopy: Rule(
+    title: "a type with =destroy and no =copy, so a copy frees what it owns twice",
+    level: lvError,
+    section: "3. Values, copies and moves (ARC/ORC)",
+    fix: "write =copy right after =destroy: {.error.} for a unique owner, a deep copy for a container (details/ownership.md)"),
 ]
+
+const TypedOnly* = {bn11DestroyWithoutCopy}
+  ## Rules that need the types the compiler resolves; only `check --typed` (typed.nim) reports them.
 
 proc parseLevel*(s: string): Level {.raises: [ValueError].} =
   ## "error", "warning" or "info".

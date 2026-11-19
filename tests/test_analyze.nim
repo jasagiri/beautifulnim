@@ -164,18 +164,23 @@ suite "BN-P input":
 
 suite "BN-L lint check files":
   const root = currentSourcePath().parentDir.parentDir
-  test "BN-L1 Given each lints/check/bn_NN.nim, when analyzed, then rule BN-NN is reported":
+  test "BN-L1 Given each lints/check/bn_NN.nim of a syntax rule, when analyzed, then rule BN-NN is reported":
+    # The files of TypedOnly rules are checked with analyzeTyped in tests/test_typed.nim.
     var seen = 0
     for path in walkFiles(root / "lints/check/bn_*.nim"):
       let id = "BN-" & path.extractFilename[3 .. 4]
+      inc seen
+      var typedOnly = false
+      for r in TypedOnly:
+        if $r == id: typedOnly = true
+      if typedOnly: continue
       let found = rulesOf(readFile(path))
       var hit = false
       for r in found:
         if $r == id: hit = true
       check hit
       if not hit: echo "  no ", id, " in ", path
-      inc seen
-    check seen == RuleId.high.ord + 1
+    check seen == RuleId.high.ord + 1 # one file per rule
   test "BN-L3 Given the package's own src/, when analyzed, then there are no findings":
     var seen = 0
     for path in walkDirRec(root / "src"):
