@@ -55,11 +55,11 @@ suite "BN-X guide examples":
       createDir(work)
       copyFile(root / "lints/nim.cfg", work / "nim.cfg")
       writeFile(work / "example.nim", e.code)
-      let (output, code) = execCmdEx("nim check --hints:off example.nim", workingDir = work)
+      let (output, code) = execCmdEx("nim check --skipParentCfg --hints:off example.nim", workingDir = work)
       if code != 0: echo "  ", e.file, ":", e.line, "\n", output
       check code == 0
       if "runnableExamples" in e.code:
-        let (docOut, docCode) = execCmdEx("nim doc --hints:off -o:example.html example.nim",
+        let (docOut, docCode) = execCmdEx("nim doc --skipParentCfg --hints:off -o:example.html example.nim",
                                           workingDir = work)
         if docCode != 0: echo "  nim doc ", e.file, ":", e.line, "\n", docOut
         check docCode == 0
@@ -136,7 +136,7 @@ suite "BN-X README":
     removeDir(work)
     createDir(work)
     writeFile(work / "embed.nim", example)
-    let (output, exit) = execCmdEx("nim check --path:" & quoteShell(root / "src") &
+    let (output, exit) = execCmdEx("nim check --skipParentCfg --path:" & quoteShell(root / "src") &
       " --path:" & quoteShell("$nim") & # $nim is Nim's, not the shell's
       " --hint:all:off --hint:Processing:on --processing:filenames embed.nim",
       workingDir = work)

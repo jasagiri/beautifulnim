@@ -5,8 +5,9 @@ import std/[os, osproc, strutils, unittest]
 const root = currentSourcePath().parentDir.parentDir
 
 proc nimCheck(dir, file: string): int =
-  ## Exit code of `nim check` run in `dir`, so that only `dir/nim.cfg` (if any) applies.
-  let (_, code) = execCmdEx("nim check --hints:off " & quoteShell(file), workingDir = dir)
+  ## Exit code of `nim check` run in `dir`, so that only `dir/nim.cfg` (if any) applies:
+  ## `--skipParentCfg`, since the temporary directory may lie under a project with its own config.
+  let (_, code) = execCmdEx("nim check --skipParentCfg --hints:off " & quoteShell(file), workingDir = dir)
   code
 
 suite "BN-L2 lints/nim.cfg":
