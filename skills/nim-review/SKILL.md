@@ -4,7 +4,7 @@ description: >-
   Review existing Nim code — a file, a module, a package, a diff or a pull request — for
   correctness, error handling, API design, idiom, memory and FFI safety, documentation and tests,
   and produce a prioritised report where every finding cites a rule and shows the smallest fix.
-  Use when asked to review, audit, critique, grade or check Nim code, a .nim diff or a Nim PR.
+  Use when asked to review, audit, critique or check Nim code, a .nim diff or a Nim PR.
   Pairs with nim-best-practices, whose sections the findings cite.
 ---
 
