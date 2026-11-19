@@ -13,7 +13,7 @@ matches a rule (ADR-BNIM-0001). What the compiler already reports (`object of Ex
 | BN-02 | a public (`*`) proc, func, method, iterator, template or macro with a parameter of type `bool`, once at each such parameter's name (`a, b: bool` gives two) | private routines; `bool` return types; a `var bool` out-parameter is still reported; a `bool` behind an alias (see BN-T1) |
 | BN-03 | every `converter` definition | — |
 | BN-04 | a pragma that sets `warnings`, `warning[X]`, `hints` or `hint[X]` to `off`, alone or under `push` | the same keys set to `on` |
-| BN-05 | a type name starting lowercase; a routine name starting uppercase or containing `_`; a type name containing `_`; a public routine `getFoo` with one parameter and a return type (level info) | declarations with `importc`, `importcpp`, `importjs` or `exportc` (they keep the foreign name); operators and backticked names |
+| BN-05 | a type name starting lowercase; a routine name starting uppercase or containing `_`; a type name containing `_`; a public routine `getFoo` with one parameter and a return type (level info) | declarations with `importc`, `importcpp`, `importjs` or `exportc` (they keep the foreign name); operators and backticked names; with `--typed`, also what BN-T7 drops |
 | BN-06 | every `include` statement | — |
 | BN-07 | every `method` definition (level info) | — |
 | BN-08 | a `template` with the `{.dirty.}` pragma | templates that mark single names `{.inject.}` |
@@ -43,7 +43,7 @@ the fix and the guide section.
 | BN-C5 | no command, an unknown command or option, a bad level, `check` without files, `--typed` with a value | the usage text; exit 2. `beautifulnim rules` lists every rule, marking those in `TypedOnly` `[check --typed only]`; exit 0 |
 | BN-C6 | `check --typed` on a file that parses but does not compile, or imports one that does not | the compiler's errors on stderr as `path:line:col: does not compile: …`, each once (an error in an imported file names that file; an error with no place names the checked file, with line and column 0); exit 2 |
 
-## Typed check (`src/beautifulnim/typed.nim`, `check --typed`, ADR-BNIM-0003, ADR-BNIM-0004)
+## Typed check (`src/beautifulnim/typed.nim`, `check --typed`, ADR-BNIM-0003 to ADR-BNIM-0005)
 
 | ID | Input | Result |
 |---|---|---|
@@ -53,6 +53,7 @@ the fix and the guide section.
 | BN-T4 | a `.nims` file | checked as NimScript, as `nim check foo.nims` does (`switch` and the other NimScript procs resolve) |
 | BN-T5 | `analyzeTyped(path)` with a `stdlib` directory that has no `system.nim` (by default `builtWithStdlib`, so after the Nim that built the checker was removed), or a `path` that cannot be read | `ok` is false with one error naming the directory and asking for a rebuild, or with `readError` set and no errors; the compiler is not run. The file is read by `analyzeTyped` itself, so the syntax rules and the compiler see the same file (`tests/test_typed.nim`) |
 | BN-T6 | a type declared in the checked file (public or private, generic or not) whose `=destroy` was written by the user (`sfOverridden`) and whose `=copy` was not; a `=dup` alone does not count, since assigning to an existing variable still calls `=copy` | BN-11 at the type's name. Not reported: a user `=copy`, deep or `{.error.}`; types without a user `=destroy`, also when a field's type has hooks of its own; types of imported modules or of files the checked file `include`s. Where a copy happens is not reported: with `=copy {.error.}`, `nim c` names each place, while `nim check` does not, since it stops before destructor injection (ADR-BNIM-0004) |
+| BN-T7 | a BN-05 finding at a routine or type declared at the top level of the checked file | dropped when its symbol has a foreign name (`sfImportc`, `sfExportc`) however the pragma got there (`{.push importc.}`, a `{.pragma: x, importc.}` alias); the `getFoo` finding (level info) is kept only when the single parameter's type, after `var`, `sink`, `ptr`, `ref` and aliases, is an object or a tuple, so `getValue*(key: string)` and generic parameters are not reported. Every other BN-05 finding stays as without `--typed` |
 
 ## Continuous integration (`.github/workflows/test.yml`)
 

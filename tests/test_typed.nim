@@ -1,5 +1,6 @@
 ## E tests for docs/specification.md: BN-T5 (analyzeTyped without the standard library it needs)
-## BN-T6 (BN-11, a type with `=destroy` and no `=copy`) and BN-L1 for the rules in TypedOnly.
+## BN-T6 (BN-11, a type with `=destroy` and no `=copy`), BN-T7 (BN-05 on the symbols) and BN-L1 for the
+## rules in TypedOnly.
 
 import std/[os, strutils, unittest]
 import beautifulnim/[rules, typed]
@@ -87,3 +88,46 @@ suite "BN-L1 lint check files of typed rules":
         if f.rule == r: hit = true
       if not hit: echo "  no ", r, " in ", path
       check hit
+
+suite "BN-T7 BN-05 decided on the symbols":
+  let work = getTempDir() / "beautifulnim-typed-naming"
+  removeDir(work)
+  createDir(work)
+
+  proc bn05(source: string): seq[(int, int, Level)] =
+    ## Line, column and level of each BN-05 finding of `source` with --typed; `source` must compile.
+    let file = work / "n.nim"
+    writeFile(file, source)
+    let a = analyzeTyped(file)
+    if not a.ok: echo "  ", a.errors
+    doAssert a.ok
+    for f in a.findings:
+      if f.rule == bn05Naming: result.add (f.line, f.col, f.level)
+
+  test "Given a C name declared through a {.pragma.} alias of importc, when checked, then BN-05 is not reported":
+    check bn05("{.pragma: cfun, importc: \"do_thing\", cdecl.}\nproc do_thing(x: cint): cint {.cfun.}\n").len == 0
+
+  test "Given a C type declared through a {.pragma.} alias of importc, when checked, then BN-05 is not reported":
+    check bn05("{.pragma: ctype, importc: \"struct foo_bar\", header: \"<stdio.h>\".}\n" &
+      "type foo_bar {.ctype.} = object\n").len == 0
+
+  test "Given a C name declared under {.push importc.}, when checked, then BN-05 is not reported":
+    check bn05("{.push importc, cdecl.}\nproc do_thing(x: cint): cint\n{.pop.}\n").len == 0
+
+  test "Given a snake_case proc without a foreign name, when checked, then BN-05 is still reported":
+    check bn05("proc do_thing*() = discard\n") == @[(1, 6, lvWarning)]
+
+  test "Given a public getFoo whose parameter is an object, a ref object or a tuple, when checked, then BN-05 is reported at level info":
+    check bn05("type\n  Person = object\n    name: string\n" &
+      "proc getName*(p: Person): string = p.name\n") == @[(4, 6, lvInfo)]
+    check bn05("type\n  Person = ref object\n    name: string\n" &
+      "proc getName*(p: Person): string = p.name\n") == @[(4, 6, lvInfo)]
+    check bn05("type\n  Pair = tuple[a, b: int]\n" &
+      "proc getA*(p: var Pair): int = p.a\n") == @[(3, 6, lvInfo)]
+
+  test "Given a public getFoo whose parameter is a string, an alias of one, or a generic, when checked, then BN-05 is not reported":
+    check bn05("proc getValue*(key: string): string = key\n").len == 0
+    check bn05("type Key = string\nproc getValue*(k: Key): string = k\n").len == 0
+    check bn05("proc getValue*[T](k: T): T = k\n").len == 0
+
+  removeDir(work)

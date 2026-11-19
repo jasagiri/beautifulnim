@@ -11,7 +11,7 @@ when not defined(nimcore):
   {.error: "beautifulnim/typed needs -d:nimcore: without it the compiler's VM does not register " &
     "compile-time procs such as querySetting, and checking code that calls them fails".}
 
-import std/[algorithm, compilesettings, os]
+import std/[algorithm, compilesettings, os, strutils]
 import compiler/[ast, cmdlinehelper, commands, condsyms, idents, lineinfos, modulegraphs,
                  msgs, options, pathutils, pipelines]
 import ./[analyze, rules]
@@ -61,10 +61,30 @@ proc destroysWithoutCopy(g: ModuleGraph; t: PType): bool =
       return not userHook(g, x, attachedAsgn)
   false
 
-proc semCheck(path, stdlib: string; sink: ErrorSink): seq[Finding] =
+proc isGetterOfValue(s: PSym): bool =
+  ## BN-T7: the single parameter of the `getFoo` routine `s` is a value with fields (an object or
+  ## a tuple, also through `var`, `sink`, `ptr`, `ref` and aliases), so `getFoo` reads a field
+  ## or a property of it. A string key, a number or a generic parameter is not such a value.
+  let params = s.typ.n
+  if params.isNil or params.len != 2 or params[1].kind != nkSym or params[1].sym.typ.isNil:
+    return false
+  params[1].sym.typ.skipTypes(Transparent + {tyPtr, tyRef}).kind in {tyObject, tyTuple}
+
+proc wrongNaming(s: PSym): bool =
+  ## BN-T7: a BN-05 finding at `s` that the symbol shows to be wrong. A foreign name stays, however
+  ## the pragma got there (`{.push importc.}`, a `{.pragma: x, importc.}` alias); the syntax rule
+  ## sees only pragmas written on the declaration itself.
+  if s.flags * {sfImportc, sfExportc} != {}: return true
+  let n = s.name.s
+  s.kind in Routines and n.len > 3 and n.startsWith("get") and n[3] in {'A'..'Z'} and
+    not isGetterOfValue(s)
+
+proc semCheck(path, stdlib: string; sink: ErrorSink; notNaming: var seq[(int, int)]): seq[Finding] =
   ## Runs the compiler's semantic pass on `path` as the main module and returns a BN-02 finding
   ## for each parameter of type bool of each public routine declared in it (BN-T1), and a BN-11
   ## finding for each type declared in it that has its own `=destroy` but no `=copy` (BN-T6).
+  ## `notNaming` receives the places of routines and types whose BN-05 finding the symbol shows to
+  ## be wrong (BN-T7).
   let cache = newIdentCache()
   let conf = newConfigRef()
   let prog = NimProg(suggestMode: true,
@@ -112,6 +132,8 @@ proc semCheck(path, stdlib: string; sink: ErrorSink): seq[Finding] =
     # point into the wrong file (the syntax rules do not read included files either).
     if s.itemId.module != module.position or s.info.fileIndex != conf.projectMainIdx or s.typ.isNil:
       continue
+    if s.kind in Routines + {skType} and wrongNaming(s):
+      notNaming.add (int(s.info.line), int(s.info.col) + 1)
     if s.kind == skType:
       if destroysWithoutCopy(graph, s.typ):
         result.add initFinding(bn11DestroyWithoutCopy, int(s.info.line), int(s.info.col) + 1)
@@ -148,8 +170,9 @@ proc analyzeTyped*(path: string; stdlib = builtWithStdlib): TypedAnalysis {.rais
       "; rebuild beautifulnim with the Nim that should check the code")])
   let sink = ErrorSink()
   var typedBools: seq[Finding]
+  var notNaming: seq[(int, int)]
   try:
-    typedBools = semCheck(path, stdlib, sink)
+    typedBools = semCheck(path, stdlib, sink, notNaming)
   except Exception as e:
     # The compiler's modules carry no raises annotations; whatever escapes is reported, not dropped.
     sink.errors.add CompileError(file: path, message: "the compiler failed: " & e.msg)
@@ -157,7 +180,9 @@ proc analyzeTyped*(path: string; stdlib = builtWithStdlib): TypedAnalysis {.rais
     return TypedAnalysis(ok: false, errors: sink.errors)
   result = TypedAnalysis(ok: true, findings: typedBools)
   for f in syntactic.findings:
-    if f.rule != bn02PublicBoolParam: result.findings.add f
+    if f.rule == bn02PublicBoolParam: continue
+    if f.rule == bn05Naming and (f.line, f.col) in notNaming: continue
+    result.findings.add f
   result.findings.sort(proc (a, b: Finding): int =
     result = cmp(a.line, b.line)
     if result == 0: result = cmp(a.col, b.col))

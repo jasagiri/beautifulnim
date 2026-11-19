@@ -83,3 +83,4 @@ Option D, behind an opt-in flag `beautifulnim check --typed` (`src/beautifulnim/
 ## 訂正 (2026-11-19)
 
 - "Ownership rules … are still not checked" holds for where a copy happens. Whether a type has a user `=copy` next to its `=destroy` is known after `SemPass` and is now checked by BN-11 (ADR-BNIM-0004).
+- "Whether other rules (BN-05 on symbol kinds …) move to the typed pass" is decided for BN-05's foreign names and `getFoo` getters in ADR-BNIM-0005.
