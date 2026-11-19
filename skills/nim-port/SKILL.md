@@ -28,8 +28,8 @@ setting disagree.
 
 ## 2. Port the tests first
 
-- One Nim test per original test, same name in Given-When-Then form, in `tests/` with
-  `std/unittest`. If the original has no tests, write tests from the behaviour list (its
+- One Nim test per original test, same name in Given-When-Then form, with `std/unittest`, in the
+  project's `tests/`; with no project, where nim-best-practices section 0 puts them. If the original has no tests, write tests from the behaviour list (its
   docstrings, its docs) before porting; the notes map each clause to its test name.
 - Run them against a stub that compiles: all fail, except tests the stub meets by accident (an
   empty result for empty input); list those. That is the baseline.
@@ -52,7 +52,7 @@ Decide the public types and procs first (guide section 4), then fill them in unt
 | Python `dict` (insertion order) | `OrderedTable` when order is observable, else `Table` |
 | Python `bytes`, JS `Uint8Array` | `seq[byte]` |
 | JS `number` | `int` or `float` chosen per use; check ranges |
-| Python `int` (unbounded) | `int`, with the bound checked before arithmetic can overflow (overflow raises `OverflowDefect`, not the original's error): saturate every accumulator (each number and the running total) just past the bound, or check before multiplying, and keep the original's order of errors (for each input, the first error the original raises is the one the port raises; a guard must not make a later error fire first) |
+| Python `int` (unbounded) | `int`, with the bound checked before arithmetic can overflow (unchecked, overflow raises `OverflowDefect`). A result that does not fit raises the error the task names for bad input (`ValueError`), and PORTING.md lists it as a deliberate difference: saturate every accumulator (each number and the running total) just past the bound, or check before multiplying, and keep the original's order of errors (for each input, the first error the original raises is the one the port raises; a guard must not make a later error fire first) |
 | Python `str` (code points) | `string` (UTF-8 bytes); `std/unicode` runes where code points matter |
 | Python generator | `iterator`; a closure iterator only when it is stored or passed. Its checks run at the first step, as Python's do at the first `next()` |
 | Go `error` return | raise, or `Opt`/result value; never ignore it |
@@ -80,6 +80,9 @@ Decide the public types and procs first (guide section 4), then fill them in unt
   the command that would confirm it.
 
 ## 6. Write PORTING.md
+
+Put it beside the port. When the task or the requester names another file for the notes, put
+these sections there and write no second file.
 
 - API mapping: each original function or type → its Nim counterpart.
 - Test mapping: each original test → its Nim test.
