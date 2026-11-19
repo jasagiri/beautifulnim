@@ -15,7 +15,7 @@ Distilled from four sources (digests in `references/`): NEP1, the Nim manual, th
 move semantics document (all at Nim 2.4.2), and the Status Nim style guide. Where they disagree,
 this file says which to follow and why. Rules a machine can check carry an ID (BN-01…) and are
 reported by `beautifulnim check` (the CLI in this repository); rules the compiler checks are
-switched on in `lints/nim.cfg`. This file is about 40 000 characters: if your reader cuts it
+switched on in `lints/nim.cfg`. This file is about 28 000 characters: if your reader cuts it
 off, read the rest by line range before you start.
 
 ## 0. When the task, the guide or the setting disagree
