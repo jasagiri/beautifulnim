@@ -61,7 +61,9 @@ proc findingsOf(path: string; mode: Mode; status: var int): (bool, seq[Finding])
       cannotRead(path, a.readError, status)
     elif not a.ok:
       for e in a.errors:
-        stderr.writeLine e.file, ":", e.line, ":", e.col, ": does not compile: ", e.message
+        # an error the compiler gives no place for (an invalid module name) belongs to the checked file
+        let file = if e.file.len > 0: e.file else: path
+        stderr.writeLine file, ":", e.line, ":", e.col, ": does not compile: ", e.message
       status = 2
     (a.ok, a.findings)
 

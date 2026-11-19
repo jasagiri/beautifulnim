@@ -215,3 +215,9 @@ suite "BN-T typed":
     check code == 0
     check output.strip == ""
     check not fileExists(marker)
+
+  test "BN-C6 Given a file name that is not a Nim identifier, when checked with --typed, then the error names that file":
+    let f = sample("my-module.nim", "proc f*() = discard\n")
+    let (output, code) = run("check --typed " & quoteShell(f))
+    check code == 2
+    check (f & ":0:0: does not compile: invalid module name") in output
