@@ -47,7 +47,9 @@ Part of nim-best-practices section 8. Read it before writing `importc`, a C call
   signature made for it; the trampoline fits any.
 - When C returns `NULL` for an allocation (`strdup`, `malloc`), raise `OutOfMemDefect`, as
   Nim's own allocator does: `raise newException(OutOfMemDefect, "strdup returned NULL")`
-  (`OutOfMemError` is deprecated, and `raiseOutOfMem` is not public).
+  (`OutOfMemError` is deprecated, and `raiseOutOfMem` is not public). Declare a C `char*` return
+  as `cstring` (a `pointer` does not convert to `cstring`), copy it into a Nim string with `$p`,
+  and free it in a `finally`: `try: result = $p finally: free(p)`.
 - Use `distinct` for handles from C so they cannot be mixed up.
 - A C flag word (`O_CREAT | O_APPEND`) stays a C integer in the binding, built from the values
   the header defines. A `set[Enum]` is not that integer: its size depends on how many values

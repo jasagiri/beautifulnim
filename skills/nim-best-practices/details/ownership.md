@@ -4,7 +4,8 @@ Part of nim-best-practices section 3. Read it before writing `=destroy`, `=copy`
 `{.cursor.}`, or a type that owns memory or an operating-system resource.
 
 - **Resources get a destructor, not a finalizer.** Write `=destroy`, decide what a copy means, and
-  reset in `=wasMoved`. Destructors must not fail or raise. When releasing can fail (a file, a
+  reset in `=wasMoved`. Memory held in a `seq` or `string` field is already freed by that field;
+  such a type writes only the copy hook it needs (`=copy {.error.}` for a unique owner). Destructors must not fail or raise. When releasing can fail (a file, a
   socket), give the type an explicit `close` that reports errors, and let `=destroy` be the
   best-effort fallback; memory alone needs no `close`. Finalizers (`new(x, finalizer)`)
   are not deterministic (Status).

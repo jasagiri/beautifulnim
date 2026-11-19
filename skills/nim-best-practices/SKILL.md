@@ -34,8 +34,8 @@ off, read the rest by line range before you start.
 - **No project**: treat the file as a project of one: a copy of `lints/nim.cfg` next to it
   (section 2), tests in `tests/` beside it run with `nim c -r` (section 11), probes in a
   directory of their own.
-- **Details**: `details/` belongs to this guide; read the file a section names before writing that
-  kind of code.
+- **Details**: read the `details/` file a section names before writing that kind of code;
+  `details/ffi.md` before `importc`, a C callback, `cast` or `ptr`.
 
 ## 1. Mindset
 
@@ -108,9 +108,9 @@ off, read the rest by line range before you start.
   code. When both forms exist, the value type gets the plain name and the other `FooRef` (NEP1
   gives the plain name to the variety used most; the Status guide always suffixes `Ref`; follow the
   project).
-- **Resources and hooks.** A type that owns memory or an operating-system resource gets
-  `=destroy` and decides what a copy does (`=copy {.error.}` or a deep `=copy`). Read
-  `details/ownership.md` before writing either.
+- **Resources and hooks.** A type that owns memory or an operating-system resource decides what
+  a copy does (`=copy {.error.}` or a deep `=copy`); `=destroy` is for a raw pointer or OS
+  handle, not a `seq` field. Read `details/ownership.md` before writing either.
 - Iterate with `items`/`pairs` to read and `mitems`/`mpairs` to change elements in place; neither
   copies the elements. Use `move(x)` or `ensureMove(x)` only where the compiler cannot see that a
   value is no longer used.
@@ -373,8 +373,7 @@ before writing threads, locks, channels or async code.
   it: `add`, `setLen`, `insert`, `delete`, or a move of the whole value. Hold the index instead,
   or finish with the pointer before you change the length.
 - Turn a check off only around measured hot code, locally, with the measurement in a comment.
-- Read `details/ffi.md` before writing `importc`, a C callback, `cast`, `ptr`, `addr` or
-  `UncheckedArray`, and run the checks it lists.
+- Run the checks `details/ffi.md` lists.
 
 ## 9. Packages and modules
 
