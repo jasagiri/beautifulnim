@@ -8,7 +8,9 @@ Part of nim-best-practices section 3. Read it before writing `=destroy`, `=copy`
   such a type writes only the copy hook it needs (`=copy {.error.}` for a unique owner). Destructors must not fail or raise. When releasing can fail (a file, a
   socket), give the type an explicit `close` that reports errors, and let `=destroy` be the
   best-effort fallback; memory alone needs no `close`. Finalizers (`new(x, finalizer)`)
-  are not deterministic (Status).
+  are not deterministic (Status). Declare the hooks right after the type, before any proc that
+  creates, copies or destroys a value of it: once the compiler has made a hook for the type,
+  a later one fails with "cannot bind another '=destroy'" (also for a probe's `=copy {.error.}`).
 - **A type with `=destroy` must say what a copy does.** Without `=copy` the compiler copies the
   fields bit by bit, so two values free the same memory: a double free the first time a copy is
   made. Passing the value to a plain parameter only borrows it; a copy happens when a value that
@@ -71,7 +73,12 @@ f.close()
 - Memory you own directly: allocate in one constructor
   (`cast[ptr UncheckedArray[T]](alloc0(n * sizeof(T)))`, with the comment), free it in `=destroy`,
   and decide copies as in section 3. Keep the zero value valid (section 4): `default(T)` holds a
-  `nil` pointer, so `=destroy` frees only when the pointer is not `nil`. `UncheckedArray` has no bounds checks, so every exported
+  `nil` pointer, so `=destroy` frees only when the pointer is not `nil`. Elements in such
+  storage: `alloc0` leaves each slot zeroed, which is the moved-from state every hook accepts, so
+  plain `data[i] = x` (with `x` a `sink` parameter) stores, `result = move(data[i])` takes an
+  element out, and `reset(data[i])` destroys one still inside; no `copyMem` or `moveMem` is needed.
+  The store first runs `=destroy` on the zeroed slot, which a correct hook treats as a no-op; a
+  test that counts destructions counts only those of values that were not moved from. `UncheckedArray` has no bounds checks, so every exported
   accessor checks the index against the length itself and raises `IndexDefect` with an `if`, the
   same defect built-in indexing raises (`doAssert` would raise `AssertionDefect`; both survive
   `-d:danger`). Use `allocShared0`/`deallocShared` only if the memory
