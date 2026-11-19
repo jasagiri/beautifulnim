@@ -28,8 +28,11 @@ setting disagree.
 
 ## 2. Port the tests first
 
-- One Nim test per original test, same name in Given-When-Then form, with `std/unittest`, in the
-  project's `tests/`; with no project, where nim-best-practices section 0 puts them. If the original has no tests, write tests from the behaviour list (its
+- One Nim test per original test, same name in Given-When-Then form (a parametrized test, or one whose
+  asserts check different behaviours, becomes a `suite` with the original's name and one test per
+  case; the test mapping lists which is which), with `std/unittest`, in the
+  project's `tests/`; with no project, in `tests/` beside the module, importing `../<module>` (nim-best-practices
+  section 0); a task that shows `import <module>` describes its callers, not the tests. If the original has no tests, write tests from the behaviour list (its
   docstrings, its docs) before porting; the notes map each clause to its test name.
 - Run them against a stub that compiles: all fail, except tests the stub meets by accident (an
   empty result for empty input); list those. That is the baseline.
@@ -75,7 +78,9 @@ Decide the public types and procs first (guide section 4), then fill them in unt
   --min-level:warning` with nothing to report (or a reason for each).
 - Run both versions on the same inputs where possible and compare outputs byte for byte. List
   the inputs that only one side can take (invalid UTF-8 for a Python `str`, numbers past
-  `int64`), and name the test that covers each. When the original cannot be run (section 0
+  `int64`), and name the test that covers each. A task that says the source runtime "is not installed" means on the machine that
+  runs the port: look for it where you work (`command -v python3 rustc cc node go`) and use it as
+  the oracle when it is there. When the original cannot be run (section 0
   of the guide), mark each behaviour taken only from reading (a runtime limit) as unverified, with
   the command that would confirm it.
 
