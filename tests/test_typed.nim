@@ -117,13 +117,23 @@ suite "BN-T7 BN-05 decided on the symbols":
   test "Given a snake_case proc without a foreign name, when checked, then BN-05 is still reported":
     check bn05("proc do_thing*() = discard\n") == @[(1, 6, lvWarning)]
 
-  test "Given a public getFoo whose parameter is an object, a ref object or a tuple, when checked, then BN-05 is reported at level info":
+  test "Given a public getFoo whose object, ref object or tuple parameter has a field foo, when checked, then BN-05 is reported at level warning":
     check bn05("type\n  Person = object\n    name: string\n" &
-      "proc getName*(p: Person): string = p.name\n") == @[(4, 6, lvInfo)]
+      "proc getName*(p: Person): string = p.name\n") == @[(4, 6, lvWarning)]
     check bn05("type\n  Person = ref object\n    name: string\n" &
-      "proc getName*(p: Person): string = p.name\n") == @[(4, 6, lvInfo)]
+      "proc getName*(p: Person): string = p.name\n") == @[(4, 6, lvWarning)]
     check bn05("type\n  Pair = tuple[a, b: int]\n" &
-      "proc getA*(p: var Pair): int = p.a\n") == @[(3, 6, lvInfo)]
+      "proc getA*(p: var Pair): int = p.a\n") == @[(3, 6, lvWarning)]
+
+  test "Given a public getFoo whose field foo is inherited or written in another style, when checked, then BN-05 is reported at level warning":
+    check bn05("type\n  Base = object of RootObj\n    name: string\n  Person = object of Base\n" &
+      "proc getName*(p: Person): string = p.name\n") == @[(5, 6, lvWarning)]
+    check bn05("type\n  Person = object\n    full_name: string\n" &
+      "proc getFullName*(p: Person): string = p.full_name\n").contains((4, 6, lvWarning))
+
+  test "Given a public getFoo whose object parameter has no field foo, when checked, then BN-05 stays at level info":
+    check bn05("type\n  Rect = object\n    w, h: int\n" &
+      "proc getArea*(r: Rect): int = r.w * r.h\n") == @[(4, 6, lvInfo)]
 
   test "Given a public getFoo whose parameter is a string, an alias of one, or a generic, when checked, then BN-05 is not reported":
     check bn05("proc getValue*(key: string): string = key\n").len == 0

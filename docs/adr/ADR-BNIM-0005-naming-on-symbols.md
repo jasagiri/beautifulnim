@@ -62,3 +62,7 @@ equal the finding's, since both point at the name.
 ## Rejected
 
 - Option A: a second evaluator of pragmas, which the compiler already evaluates.
+
+## 訂正 (2026-11-19)
+
+- The open question under "Not decided" is decided (jasagiri, 2026-11-19: 欄を読むものと区別する). A `getFoo` whose parameter has the field `foo` (also inherited, compared as Nim compares names) is reported at level warning, since reading a field is never the expensive call the guide allows the prefix for (`skills/nim-best-practices/SKILL.md` section 4); a computed `getFoo` stays at level info. docs/specification.md BN-T7.

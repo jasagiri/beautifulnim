@@ -130,7 +130,7 @@ off, read the rest by line range before you start.
 - Acronyms are words: `parseUrl`, `HttpHeader`, not `parseURL` (NEP1). No underscores in Nim names;
   wrappers of C code keep the C name through `importc` (BN-05 allows it there).
 - Getters are named `foo`, not `getFoo`; setters are `foo=` (NEP1). Use `getFoo`/`setFoo` only when
-  the call is expensive or has side effects (BN-05 reports public `getFoo` at level info).
+  the call is expensive or has side effects (BN-05: info; warning with `--typed` if it reads a field).
 - Order words subject-verb: `fileExists`, not `existsFile`. The in-place form is the verb, the
   copying form its past participle: `sort`/`sorted`, `reverse`/`reversed`.
 - Standard vocabulary: `initFoo` constructs a value, `newFoo` a `ref`; `len`, `add`, `contains`
