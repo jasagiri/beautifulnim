@@ -43,6 +43,12 @@ suite "BN-02 public bool parameter":
   test "Given a public proc with a var bool parameter, when analyzed, then BN-02 is reported":
     check reports("proc f*(done: var bool) = discard\n", bn02PublicBoolParam)
 
+  test "Given grouped parameters a, b: bool, when analyzed, then BN-02 is reported exactly once at each name and not at the type":
+    var n = 0
+    for f in analyze("func f*(a, b: bool): int = 0\n").findings:
+      if f.rule == bn02PublicBoolParam: inc n
+    check n == 2
+
 suite "BN-03 converter":
   test "Given a converter, when analyzed, then BN-03 is reported":
     check reports("converter toInt(x: float): int = int(x)\n", bn03Converter)
@@ -75,6 +81,24 @@ suite "BN-05 naming":
     check not reports("type Point = object\n  x: int\nproc `+`(a, b: Point): Point = a\nproc readAll() = discard\n",
                       bn05Naming)
 
+  test "Given a public getFoo without a return type, or a private getFoo, when analyzed, then BN-05 is not reported":
+    check not reports("proc getName*(p: int) = discard\n", bn05Naming)
+    check not reports("proc getName(p: int): int = p\n", bn05Naming)
+  test "Given a public routine named get or getA with one parameter and a return type, when analyzed, then only getA is reported at level info":
+    check not reports("proc get*(p: int): int = p\n", bn05Naming)
+    let a = analyze("proc getA*(p: int): int = p\n")
+    check a.findings.len == 1
+    check a.findings[0].rule == bn05Naming
+    check a.findings[0].level == lvInfo
+  test "Given a one-letter uppercase routine name and a one-letter lowercase type name, when analyzed, then BN-05 is reported at each":
+    check reports("proc F*() = discard\n", bn05Naming)
+    check reports("type t = int\n", bn05Naming)
+  test "Given a snake_case routine and a lowercase type that carry pragmas other than a foreign name, when analyzed, then BN-05 is reported":
+    check reports("proc do_it() {.inline.} = discard\n", bn05Naming)
+    check reports("type color {.pure.} = enum\n  red\n", bn05Naming)
+  test "Given an importc type with a C name, when analyzed, then BN-05 is not reported":
+    check not reports("type foo_bar {.importc: \"struct foo_bar\", header: \"<x.h>\".} = object\n", bn05Naming)
+
 suite "BN-06 include":
   test "Given an include statement, when analyzed, then BN-06 is reported":
     check reports("include other\n", bn06Include)
@@ -92,6 +116,9 @@ suite "BN-08 dirty template":
     check not reports("template t(x: int) =\n  let y {.inject.} = x\n", bn08DirtyTemplate)
   test "Given a proc marked dirty in a comment, when analyzed, then BN-08 is not reported":
     check not reports("proc p() = discard # {.dirty.}\n", bn08DirtyTemplate)
+
+  test "Given a template with a pragma other than dirty, when analyzed, then BN-08 is not reported":
+    check not reports("template t*() {.used.} = discard\n", bn08DirtyTemplate)
 
 suite "BN-09 code built from a string":
   test "Given parseStmt on a string in a macro, when analyzed, then BN-09 is reported":
@@ -139,6 +166,28 @@ suite "BN-10 template argument used more than once":
   test "Given a proc that uses its parameter twice, when analyzed, then BN-10 is not reported":
     check not reports("proc sq(x: int): int = x * x\n", bn10RepeatedTemplateArg)
 
+  test "Given a parameter that names a loop variable, a routine or the loop it runs over, when analyzed, then only the iterated argument used again is reported":
+    check not reports("template t*(i: untyped) =\n  for i in 0 ..< 3:\n    echo i\n    echo i\n", bn10RepeatedTemplateArg)
+    check not reports("template defProc*(name: untyped) =\n  proc name() = discard\n  name()\n", bn10RepeatedTemplateArg)
+    check reports("template t*(x: untyped) =\n  for i in x: echo i\n  echo x\n", bn10RepeatedTemplateArg)
+  test "Given an argument used once beside a bind statement and once as a named argument, when analyzed, then BN-10 is not reported":
+    check not reports("template t*(x: untyped) =\n  bind echo\n  echo x\n", bn10RepeatedTemplateArg)
+    check not reports("template t*(x: untyped) =\n  echo P(a: x)\n", bn10RepeatedTemplateArg)
+  test "Given an argument used once after a when, an if or a case that does not use it, when analyzed, then BN-10 is not reported":
+    check not reports("template t*(x: untyped) =\n  when defined(foo):\n    discard\n  echo x\n", bn10RepeatedTemplateArg)
+    check not reports("template t*(x: untyped) =\n  if true:\n    discard\n  echo x\n", bn10RepeatedTemplateArg)
+    check not reports("template t*(x: untyped) =\n  case 1\n  of 1: discard\n  else: discard\n  echo x\n", bn10RepeatedTemplateArg)
+  test "Given an argument used twice in the else branch of a when or a case, when analyzed, then BN-10 is reported":
+    check reports("template t*(x: untyped) =\n  when defined(foo):\n    discard\n  else:\n    echo x\n    echo x\n", bn10RepeatedTemplateArg)
+    check reports("template t*(x: untyped) =\n  case 1\n  of 1: discard\n  else:\n    echo x\n    echo x\n", bn10RepeatedTemplateArg)
+  test "Given an argument used as a case selector and once after the case, when analyzed, then BN-10 is reported":
+    check reports("template t*(x: untyped) =\n  case x\n  of 1: discard\n  else: discard\n  echo x\n", bn10RepeatedTemplateArg)
+  test "Given parameters of type typedesc[int] and static int used twice, when analyzed, then BN-10 is not reported":
+    check not reports("template t*(T: typedesc[int]) =\n  var a: T\n  var b: T\n", bn10RepeatedTemplateArg)
+    check not reports("template t*(n: static int) =\n  echo n\n  echo n\n", bn10RepeatedTemplateArg)
+  test "Given an argument used once whose type name appears twice in the body, when analyzed, then BN-10 is not reported":
+    check not reports("template t*(x: int) =\n  var a: int = x\n  var b: int\n", bn10RepeatedTemplateArg)
+
 suite "finding contents":
   test "Given a violation on line 3 column 1, when analyzed, then the finding carries that place and the rule text":
     let a = analyze("let a = 1\n\nconverter toInt(x: float): int = int(x)\n")
@@ -161,6 +210,24 @@ suite "BN-P input":
     let a = analyze(repeat('#', MaxSourceBytes + 1))
     check not a.ok
     check "MaxSourceBytes" in a.parseErrors[0].message or $MaxSourceBytes in a.parseErrors[0].message
+
+  test "BN-P1 Given a syntax error at line 1 column 9, when analyzed, then the first parse error carries that place":
+    let a = analyze("proc f( = discard\n")
+    check not a.ok
+    check a.parseErrors.len > 0
+    check a.parseErrors[0].line == 1
+    check a.parseErrors[0].col == 9
+  test "BN-P1 Given source with exactly one syntax error, when analyzed, then ok is false with that one error":
+    let a = analyze("let x = (1\n")
+    check not a.ok
+    check a.parseErrors.len == 1
+  test "BN-P3 Given source of exactly 1 MiB and of 1 MiB and one byte, when analyzed, then only the longer one is refused":
+    let atLimit = "#" & repeat(' ', (1 shl 20) - 2) & "\n"
+    check atLimit.len == 1 shl 20
+    check analyze(atLimit).ok
+    let over = analyze(atLimit & " ")
+    check not over.ok
+    check over.parseErrors.len == 1
 
 suite "BN-L lint check files":
   const root = currentSourcePath().parentDir.parentDir
