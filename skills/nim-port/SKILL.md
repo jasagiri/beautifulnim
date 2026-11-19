@@ -21,7 +21,10 @@ setting disagree.
 - Separate behaviour from accident: things that only exist because of the source language (manual
   memory management, a GIL workaround, Python's dict ordering, JavaScript's number type).
 - A limit of the source runtime that callers can see (Python's 4300-digit `int()` limit) is
-  behaviour when the task asks for the same results on every input: keep it and list it.
+  behaviour when the task asks for the same results on every input: keep it and list it. So is a
+  data table of the runtime (which code points `str.isspace()`, `\d` or `str::trim` accept):
+  generate it from the source runtime, write the generator command in PORTING.md, and check the
+  port against the runtime over every code point.
 - Bugs are behaviour until told otherwise: keep them, mark them in a test, and list them.
 - Error messages are behaviour when callers or the task read them. When the task names only the
   error type, match the type and list the message differences in the notes.
@@ -70,7 +73,11 @@ Decide the public types and procs first (guide section 4), then fill them in unt
 - Do not grow the API: port what exists, not what might be useful.
 - Keep the algorithm unless it is the source of a listed bug; a faster algorithm is a separate change.
 - Use the standard library first (`std/json`, `std/tables`, `std/strutils`, `std/os`), then
-  well-known packages; say which and why.
+  well-known packages; say which and why. Where the port must match the original exactly, run a
+  standard routine against the oracle on the input classes it will see before relying on it
+  (`formatFloat` has no `%g` mode; `parseFloat` misreads literals over 494 digits in Nim 2.4).
+  When it differs, use the nearest primitive that matches, keep the comparison as a test, and
+  list the replacement under deliberate differences.
 
 ## 5. Verify
 
@@ -78,7 +85,9 @@ Decide the public types and procs first (guide section 4), then fill them in unt
   --min-level:warning` with nothing to report (or a reason for each).
 - Run both versions on the same inputs where possible and compare outputs byte for byte. List
   the inputs that only one side can take (invalid UTF-8 for a Python `str`, numbers past
-  `int64`), and name the test that covers each. A task that says the source runtime "is not installed" means on the machine that
+  `int64`), and name the test that covers each. For an input only the port can take, choose
+  what it does (the error and message the task names for bad input, or a stated result), pin it
+  in a test, and list it under deliberate differences: no oracle can decide it. A task that says the source runtime "is not installed" means on the machine that
   runs the port: look for it where you work (`command -v python3 rustc cc node go`) and use it as
   the oracle when it is there. When the original cannot be run (section 0
   of the guide), mark each behaviour taken only from reading (a runtime limit) as unverified, with
