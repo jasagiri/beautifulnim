@@ -268,7 +268,7 @@ how to test them.
 | A value may legitimately be absent | `Option[T]` |
 | A value is present but invalid (a stored `"abc"` read as an integer) | raise; keep `Option` for absence only |
 | The caller can recover (bad input, I/O, network) | raise a `CatchableError` subtype, or return a result value (the `results` package) if the project uses it |
-| A bug, a broken invariant | `doAssert` / `raiseAssert` (a `Defect`) |
+| A bug, a broken invariant | `doAssert` / `raiseAssert` (a `Defect`; `details/errors.md`) |
 
 - **Annotate effects on every exported routine** — `proc`, `func`, `iterator`, `method`, getters
   included: `{.raises: [].}` when nothing escapes, `{.raises: [IOError, ParseError].}` otherwise.
@@ -280,8 +280,8 @@ how to test them.
 - **`raises` lists `CatchableError`s only.** `Defect`s (`IndexDefect`, `AssertionDefect`,
   `OverflowDefect`, …) are not tracked: a proc marked `{.raises: [].}` may still raise one, and
   listing one only earns the hint "cannot raise" (`XCannotRaiseY`). Name the Defects a proc raises
-  on misuse in its `##` comment. Templates and macros have no effects of their own and take no
-  `raises`: their expansion is checked against the routine that calls them.
+  on misuse in its `##` comment. Templates and macros take no `raises`: their expansion is checked
+  against the routine that calls them.
 - Integer overflow raises `OverflowDefect`. A sum of amounts that come from outside checks
   before it adds (`if b > 0 and a > high(int64) - b: raise ...`), or the doc comment states the
   bound the inputs keep.
