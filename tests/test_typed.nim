@@ -144,6 +144,20 @@ suite "BN-T7 BN-05 decided on the symbols":
     check bn05("type Key = string\nproc getValue*(k: Key): string = k\n").len == 0
     check bn05("proc getValue*[T](k: T): T = k\n").len == 0
 
+  test "Given public routines named getFoo with no parameter or two, and one named get, when checked, then nothing fails and BN-05 is not reported":
+    check bn05("type\n  P = object\n    foo: int\nproc getFoo*(): int = 1\nproc getFoo*(a, b: P): int = a.foo\n" &
+      "proc get*(p: P): int = p.foo\n").len == 0
+
+  test "Given a type named getThing, when checked, then BN-05 stays as the syntax rule reports it":
+    check bn05("type getThing* = object\n  a: int\n") == @[(1, 6, lvWarning)]
+
+  test "Given a public getFoo whose field is inherited through a ref base, when checked, then BN-05 is reported at level warning":
+    check bn05("type\n  Base = ref object of RootObj\n    name: string\n  Person = ref object of Base\n" &
+      "proc getName*(p: Person): string = p.name\n") == @[(5, 6, lvWarning)]
+
+  test "Given a public getFoo whose tuple parameter has no field foo, when checked, then BN-05 stays at level info":
+    check bn05("type\n  Pair = tuple[a, b: int]\nproc getC*(p: Pair): int = p.a\n") == @[(3, 6, lvInfo)]
+
   removeDir(work)
 
 suite "BN-T8 a returned cstring whose string is freed on return":
@@ -182,5 +196,17 @@ suite "BN-T8 a returned cstring whose string is freed on return":
     check bn12("type\n  P = object\n    label: string\nproc f*(p: P): cstring =\n  cstring(p.label)\n").len == 0
     check bn12("var g = \"abc\"\nproc f*(): cstring =\n  cstring(g)\n").len == 0
     check bn12("proc f*(): cstring =\n  cstring(\"abc\")\n").len == 0
+
+  test "Given a cstring returned by a call and a conversion of a temporary to a distinct string, when checked, then BN-12 is not reported":
+    check bn12("proc g(x: string): cstring = \"lit\"\nproc h*(s: string): cstring = g(s & \"x\")\n").len == 0
+    check bn12("type D = distinct string\nproc f*(s: string): D = D(s & \"x\")\n").len == 0
+
+  test "Given cstring(s & \"\\0\") at line 2 column 3, when checked with --typed, then BN-12 is reported at the conversion, the opening parenthesis at column 10":
+    let file = work / "c.nim"
+    writeFile(file, "proc cname*(s: string): cstring =\n  cstring(s & \"\\0\")\n")
+    var places: seq[(int, int)]
+    for f in analyzeTyped(file).findings:
+      if f.rule == bn12DanglingCstring: places.add (f.line, f.col)
+    check places == @[(2, 10)]
 
   removeDir(work)
