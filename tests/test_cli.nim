@@ -44,6 +44,12 @@ suite "BN-C command":
     let (output, code) = run("check --min-level:warning " & quoteShell(f))
     check code == 0 and output.strip == ""
 
+  test "BN-C2 Given a warning finding and --min-level:warning, when checked, then it is printed and the exit is 1":
+    let f = sample("warn.nim", "proc open*(create: bool) = discard\n")
+    let (output, code) = run("check --min-level:warning " & quoteShell(f))
+    check code == 1
+    check "[BN-02]" in output
+
   test "BN-C3 Given --format:json, when checked, then each file has its findings as JSON":
     let f = sample("conv2.nim", "converter c(x: float): int = int(x)\n")
     let (output, code) = execCmdEx(quoteShell(exe) & " check --format:json " & quoteShell(f))
@@ -92,9 +98,15 @@ suite "BN-C command":
 
   test "BN-C5 Given no command, an unknown option or check without files, when run, then usage and exit 2":
     for args in ["", "check", "check --loud x.nim", "frobnicate", "check --min-level:loud x.nim",
-                 "check --typed:yes x.nim"]:
+                 "check --typed:yes x.nim", "check --typed:y x.nim"]:
       let (output, code) = run(args)
       check code == 2
+      check "Usage:" in output
+
+  test "BN-C5 Given --help or -h, when run, then the usage text is printed and the exit is 0":
+    for args in ["--help", "-h"]:
+      let (output, code) = run(args)
+      check code == 0
       check "Usage:" in output
 
   test "BN-C5 Given rules, when run, then every rule is listed and the exit is 0":

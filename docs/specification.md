@@ -41,7 +41,7 @@ the fix and the guide section.
 | BN-C2 | `--min-level:error\|warning\|info` | only findings at that level or above are printed and counted for the exit status |
 | BN-C3 | `--format:json` | a JSON array with one entry per file, in order: `{"file", "findings": [{"rule", "level", "line", "col", "title", "fix", "section"}]}`, or, for a file that could not be checked (BN-C4, BN-C6), `{"file", "errors": [{"file", "line", "col", "kind", "message"}]}` with no `"findings"`, `kind` being `cannot read`, `not valid Nim` or `does not compile`; the messages also go to stderr and the exit is 2 |
 | BN-C4 | a file that does not parse, or cannot be read (with or without `--typed`) | the parser's messages on stderr as `path:line:col: not valid Nim: …`, or `path: cannot read: …`; exit 2 |
-| BN-C5 | no command, an unknown command or option, a bad level, `check` without files, `--typed` with a value | the usage text; exit 2. `beautifulnim rules` lists every rule, marking those in `TypedOnly` `[check --typed only]`; exit 0 |
+| BN-C5 | no command, an unknown command or option, a bad level, `check` without files, `--typed` with a value | the usage text; exit 2. `beautifulnim rules` lists every rule, marking those in `TypedOnly` `[check --typed only]`; exit 0. `--help` or `-h` prints the usage text; exit 0 |
 | BN-C6 | `check --typed` on a file that parses but does not compile, or imports one that does not | the compiler's errors on stderr as `path:line:col: does not compile: …`, each once (an error in an imported file names that file; an error with no place names the checked file, with line and column 0); exit 2 |
 
 ## Typed check (`src/beautifulnim/typed.nim`, `check --typed`, ADR-BNIM-0003 to ADR-BNIM-0006)
