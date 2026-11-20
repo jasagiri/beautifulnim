@@ -41,29 +41,29 @@
       "reason": "only a parameter can have type kind tySink, and every parameter has a type after semantic analysis, so (skParam or typ != nil) and kind == tySink selects the same symbols"
     },
     {
-      "fingerprint": "src/beautifulnim/typed.nim:CVR:b9d8e2fd4e7f3d77:0",
+      "fingerprint": "src/beautifulnim/typed.nim:CVR:21fb791425a9f831:0",
       "file": "src/beautifulnim/typed.nim",
-      "line": 134,
+      "line": 132,
       "mutator": "CVR",
       "original": "0",
       "replacement": "1",
       "class": "equivalent",
-      "reason": "stopping the unwrapping at a one-element statement list changes nothing for the forms the compiler produces: probes with a doc comment, parentheses, a template returning the conversion and an untyped template gave the same findings with the mutant built (2026-11-20); no form that leaves a one-element nkStmtListExpr around the value was found"
+      "reason": "stopping at a one-element statement list changes nothing for the forms the compiler produces: probes with a doc comment, parentheses, a template returning the conversion and an untyped template gave the same findings with the mutant built (2026-11-20, on the loop this replaced); no form that leaves a one-element nkStmtListExpr around the value was found"
     },
     {
-      "fingerprint": "src/beautifulnim/typed.nim:ROR:3b34a9ad7a377f9d:0",
+      "fingerprint": "src/beautifulnim/typed.nim:ROR:8885217a5dcb9349:0",
       "file": "src/beautifulnim/typed.nim",
-      "line": 134,
+      "line": 132,
       "mutator": "ROR",
-      "original": "rhs.len > 0",
+      "original": "n.len > 0",
       "replacement": "<> -> >=>",
       "class": "equivalent",
-      "reason": "the compiler gives no empty statement list as the value assigned to result, so len > 0 and len >= 0 agree"
+      "reason": "the compiler gives no empty statement list as a value, so in valuesOf len > 0 and len >= 0 agree (n[^1] of an empty list is never taken)"
     },
     {
       "fingerprint": "src/beautifulnim/typed.nim:AOR:4a97faa22833be2c:0",
       "file": "src/beautifulnim/typed.nim",
-      "line": 140,
+      "line": 160,
       "mutator": "AOR",
       "original": "{nkSym, nkIdent, nkEmpty, nkNilLit, nkType} + nkLiterals",
       "replacement": "<+ -> ->",
@@ -73,7 +73,7 @@
     {
       "fingerprint": "src/beautifulnim/typed.nim:SDL:e899aca0d4813254:0",
       "file": "src/beautifulnim/typed.nim",
-      "line": 179,
+      "line": 199,
       "mutator": "SDL",
       "original": "conf.setCmd cmdCheck",
       "replacement": "discard",
@@ -83,7 +83,7 @@
     {
       "fingerprint": "src/beautifulnim/typed.nim:SDL:b8c2409c2011a9fc:0",
       "file": "src/beautifulnim/typed.nim",
-      "line": 181,
+      "line": 201,
       "mutator": "SDL",
       "original": "conf.searchPaths.add conf.libpath",
       "replacement": "discard",
@@ -93,7 +93,7 @@
     {
       "fingerprint": "src/beautifulnim/typed.nim:CVR:dff54d97809ee49f:0",
       "file": "src/beautifulnim/typed.nim",
-      "line": 183,
+      "line": 203,
       "mutator": "CVR",
       "original": "0",
       "replacement": "1",
@@ -103,7 +103,7 @@
     {
       "fingerprint": "src/beautifulnim/typed.nim:SDL:7a20c243e5d4b388:0",
       "file": "src/beautifulnim/typed.nim",
-      "line": 186,
+      "line": 206,
       "mutator": "SDL",
       "original": "sink.errors.add CompileError(file: path,; message: \"the compiler did not produce a module\")",
       "replacement": "discard",
@@ -113,7 +113,7 @@
     {
       "fingerprint": "src/beautifulnim/typed.nim:LOR:ddf0b0cee8698fbd:0",
       "file": "src/beautifulnim/typed.nim",
-      "line": 197,
+      "line": 217,
       "mutator": "LOR",
       "original": "s.kind in Routines and s.ast != nil",
       "replacement": "<and -> or>",
@@ -123,7 +123,7 @@
     {
       "fingerprint": "src/beautifulnim/typed.nim:ROR:cb509736a5a249d5:0",
       "file": "src/beautifulnim/typed.nim",
-      "line": 197,
+      "line": 217,
       "mutator": "ROR",
       "original": "s.ast.len > bodyPos",
       "replacement": "<> -> >=>",
@@ -133,7 +133,7 @@
     {
       "fingerprint": "src/beautifulnim/typed.nim:SDL:a378e49c5cb64526:0",
       "file": "src/beautifulnim/typed.nim",
-      "line": 243,
+      "line": 263,
       "mutator": "SDL",
       "original": "sink.errors.add CompileError(file: path,; message: \"the compiler failed: \" & e.msg)",
       "replacement": "discard",

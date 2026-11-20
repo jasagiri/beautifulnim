@@ -24,6 +24,10 @@ How the numbers came about:
   were measured again with both test files after the fix; the 14 left are 11 equivalent and 3
   unreached, each with its reason. Equivalence that rests on what the compiler produces was
   checked by building the mutant and running it on probe files, as the reasons say.
+- `typed.nim`, after the BN-12 fix for block, if, case and try values (f99aa10a): its lines
+  (`valuesOf` and `danglingCstrings`) were measured again with both test files: 42 of 44 killed.
+  The 2 left are the same two equivalent mutants of the statement-list unwrapping as before, now
+  in `valuesOf`; the ledger still has 14 survivors.
 
 ## Running it again
 
