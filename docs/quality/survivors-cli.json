@@ -1,0 +1,44 @@
+{
+  "survivors": [
+    {
+      "fingerprint": "src/beautifulnim/cli.nim:SDL:15b04f18c3726c1a:0",
+      "file": "src/beautifulnim/cli.nim",
+      "line": 62,
+      "mutator": "SDL",
+      "original": "doAssert a.ok == (errors.len == 0), \"analyze: ok must mean no parse errors\"",
+      "replacement": "discard",
+      "class": "equivalent",
+      "reason": "the doAssert states an invariant of analyze (ok exactly when there are no parse errors); while analyze keeps it, removing the assertion changes nothing a test can see"
+    },
+    {
+      "fingerprint": "src/beautifulnim/cli.nim:CVR:ec7b0a35dade182a:0",
+      "file": "src/beautifulnim/cli.nim",
+      "line": 66,
+      "mutator": "CVR",
+      "original": "0",
+      "replacement": "1",
+      "class": "equivalent",
+      "reason": "readError is an OS error message, never a single character, so len > 1 and len > 0 select the same cases"
+    },
+    {
+      "fingerprint": "src/beautifulnim/cli.nim:CVR:6e34f7e6e2894f21:0",
+      "file": "src/beautifulnim/cli.nim",
+      "line": 71,
+      "mutator": "CVR",
+      "original": "0",
+      "replacement": "1",
+      "class": "equivalent",
+      "reason": "an error file path from the compiler is absolute, never a single character, so len > 1 and len > 0 select the same cases"
+    },
+    {
+      "fingerprint": "src/beautifulnim/cli.nim:SDL:9c09120d76ffefb8:0",
+      "file": "src/beautifulnim/cli.nim",
+      "line": 73,
+      "mutator": "SDL",
+      "original": "doAssert a.ok == (errors.len == 0), \"analyzeTyped: ok must mean no errors\"",
+      "replacement": "discard",
+      "class": "equivalent",
+      "reason": "the doAssert states an invariant of analyzeTyped (ok exactly when there are no errors); while analyzeTyped keeps it, removing the assertion changes nothing a test can see"
+    }
+  ]
+}

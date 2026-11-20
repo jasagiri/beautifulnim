@@ -1,0 +1,204 @@
+{
+  "survivors": [
+    {
+      "fingerprint": "src/beautifulnim/analyze.nim:CVR:fd2adc1c8d3dfae5:0",
+      "file": "src/beautifulnim/analyze.nim",
+      "line": 64,
+      "mutator": "CVR",
+      "original": "0",
+      "replacement": "1",
+      "class": "equivalent",
+      "reason": "isExported is only called on a routine name (namePos); the parser never puts a pragma expression there, so the nkPragmaExpr branch is not reached with a routine name"
+    },
+    {
+      "fingerprint": "src/beautifulnim/analyze.nim:LOR:75cd811cc53615ca:0",
+      "file": "src/beautifulnim/analyze.nim",
+      "line": 89,
+      "mutator": "LOR",
+      "original": "s.len == 0 or s[0] notin Letters",
+      "replacement": "<or -> and>",
+      "class": "equivalent",
+      "reason": "an identifier is never empty and an operator never starts with a letter, contains an uppercase first letter or _, so with and instead of or the later tests still find nothing"
+    },
+    {
+      "fingerprint": "src/beautifulnim/analyze.nim:LBR:852e2f21d637faa4:0",
+      "file": "src/beautifulnim/analyze.nim",
+      "line": 117,
+      "mutator": "LBR",
+      "original": "0 ..< n.len - 2",
+      "replacement": "<..< -> ..>",
+      "class": "spec_question",
+      "reason": "a parameter used as a type in a declaration in the body (var a: x) counts as a use of x; is a type position an evaluation under BN-10? The mutant treats it as a declaration and stops reporting"
+    },
+    {
+      "fingerprint": "src/beautifulnim/analyze.nim:CVR:42bddcdc9bad595a:0",
+      "file": "src/beautifulnim/analyze.nim",
+      "line": 141,
+      "mutator": "CVR",
+      "original": "0",
+      "replacement": "1",
+      "class": "equivalent",
+      "reason": "a call with only its callee has no argument, so skipping the NotEvaluating test for it gives the same count"
+    },
+    {
+      "fingerprint": "src/beautifulnim/analyze.nim:ROR:57d4dfd104b82132:0",
+      "file": "src/beautifulnim/analyze.nim",
+      "line": 141,
+      "mutator": "ROR",
+      "original": "n.len > 0",
+      "replacement": "<> -> >=>",
+      "class": "equivalent",
+      "reason": "a call node always has its callee, so n.len >= 0 and n.len > 0 select the same nodes"
+    },
+    {
+      "fingerprint": "src/beautifulnim/analyze.nim:ROR:8b210d49f74408d8:0",
+      "file": "src/beautifulnim/analyze.nim",
+      "line": 150,
+      "mutator": "ROR",
+      "original": "branch.len > 0",
+      "replacement": "<> -> >=>",
+      "class": "equivalent",
+      "reason": "a when branch always has a body son, so branch.len >= 0 and > 0 select the same branches"
+    },
+    {
+      "fingerprint": "src/beautifulnim/analyze.nim:ROR:578adf69939e3da0:0",
+      "file": "src/beautifulnim/analyze.nim",
+      "line": 164,
+      "mutator": "ROR",
+      "original": "n[i].len > 0",
+      "replacement": "<> -> >=>",
+      "class": "equivalent",
+      "reason": "an of or else branch always has a body son, so n[i].len >= 0 and > 0 select the same branches"
+    },
+    {
+      "fingerprint": "src/beautifulnim/analyze.nim:CVR:c31de60c5d359849:0",
+      "file": "src/beautifulnim/analyze.nim",
+      "line": 174,
+      "mutator": "CVR",
+      "original": "0",
+      "replacement": "1",
+      "class": "equivalent",
+      "reason": "a bracket expression in a type has a base and at least one argument, so t.len > 1 holds whenever t.len > 0 does"
+    },
+    {
+      "fingerprint": "src/beautifulnim/analyze.nim:ROR:2ab79487bd3989eb:0",
+      "file": "src/beautifulnim/analyze.nim",
+      "line": 174,
+      "mutator": "ROR",
+      "original": "t.len > 0",
+      "replacement": "<> -> >=>",
+      "class": "equivalent",
+      "reason": "a bracket expression always has its base, so t.len >= 0 and > 0 are the same"
+    },
+    {
+      "fingerprint": "src/beautifulnim/analyze.nim:CVR:2b78f1beb740c211:0",
+      "file": "src/beautifulnim/analyze.nim",
+      "line": 175,
+      "mutator": "CVR",
+      "original": "0",
+      "replacement": "1",
+      "class": "equivalent",
+      "reason": "a command type (static int) has the callee and one argument, so t.len > 1 holds whenever t.len > 0 does"
+    },
+    {
+      "fingerprint": "src/beautifulnim/analyze.nim:ROR:bb15594c05a6c87f:0",
+      "file": "src/beautifulnim/analyze.nim",
+      "line": 175,
+      "mutator": "ROR",
+      "original": "t.len > 0",
+      "replacement": "<> -> >=>",
+      "class": "equivalent",
+      "reason": "a command node always has its callee, so t.len >= 0 and > 0 are the same"
+    },
+    {
+      "fingerprint": "src/beautifulnim/analyze.nim:ROR:682f605cc74fbe5d:0",
+      "file": "src/beautifulnim/analyze.nim",
+      "line": 213,
+      "mutator": "ROR",
+      "original": "s.len > 0",
+      "replacement": "<> -> >=>",
+      "class": "equivalent",
+      "reason": "an identifier is never empty, so s.len >= 0 and > 0 are the same"
+    },
+    {
+      "fingerprint": "src/beautifulnim/analyze.nim:ROR:697d0ec48737b135:0",
+      "file": "src/beautifulnim/analyze.nim",
+      "line": 228,
+      "mutator": "ROR",
+      "original": "n.len > 0",
+      "replacement": "<> -> >=>",
+      "class": "equivalent",
+      "reason": "an except branch always has its body son, so n.len >= 0 and > 0 are the same"
+    },
+    {
+      "fingerprint": "src/beautifulnim/analyze.nim:CVR:5c42e11f349808c3:0",
+      "file": "src/beautifulnim/analyze.nim",
+      "line": 234,
+      "mutator": "CVR",
+      "original": "0",
+      "replacement": "1",
+      "class": "equivalent",
+      "reason": "parseStmt and parseExpr are only valid with an argument, so a call to them with only the callee (n.len 1) is not code the rule has to see"
+    },
+    {
+      "fingerprint": "src/beautifulnim/analyze.nim:ROR:e2e9b4d12a59a3eb:0",
+      "file": "src/beautifulnim/analyze.nim",
+      "line": 234,
+      "mutator": "ROR",
+      "original": "n.len > 0",
+      "replacement": "<> -> >=>",
+      "class": "equivalent",
+      "reason": "a call node always has its callee, so n.len >= 0 and > 0 are the same"
+    },
+    {
+      "fingerprint": "src/beautifulnim/analyze.nim:SDL:1b0588819a1c5a4c:0",
+      "file": "src/beautifulnim/analyze.nim",
+      "line": 254,
+      "mutator": "SDL",
+      "original": "sink.errors.add ParseError(message: \"the parser failed: \" & e.msg)",
+      "replacement": "discard",
+      "class": "unreached",
+      "reason": "no known input makes compiler/parser.parseString raise; it reports through the error hook, which BN-P1 tests"
+    },
+    {
+      "fingerprint": "src/beautifulnim/report.nim:ROR:3994292038ec0100:0",
+      "file": "src/beautifulnim/report.nim",
+      "line": 14,
+      "mutator": "ROR",
+      "original": "f.level <= minLevel",
+      "replacement": "<<= -> <>",
+      "class": "accepted",
+      "reason": "killed by test_cli: the job that runs report.nim and rules.nim against test_cli (BN-C2 and --min-level) killed all 4 of these mutants on 2026-11-20; test_analyze does not reach the command line"
+    },
+    {
+      "fingerprint": "src/beautifulnim/report.nim:SDL:8019a1c32ee16ba6:0",
+      "file": "src/beautifulnim/report.nim",
+      "line": 14,
+      "mutator": "SDL",
+      "original": "result.add f",
+      "replacement": "discard",
+      "class": "accepted",
+      "reason": "killed by test_cli: the job that runs report.nim and rules.nim against test_cli (BN-C2 and --min-level) killed all 4 of these mutants on 2026-11-20; test_analyze does not reach the command line"
+    },
+    {
+      "fingerprint": "src/beautifulnim/rules.nim:ROR:50924900beb44ca3:0",
+      "file": "src/beautifulnim/rules.nim",
+      "line": 103,
+      "mutator": "ROR",
+      "original": "$l == s",
+      "replacement": "<== -> !=>",
+      "class": "accepted",
+      "reason": "killed by test_cli: the job that runs report.nim and rules.nim against test_cli (BN-C2 and --min-level) killed all 4 of these mutants on 2026-11-20; test_analyze does not reach the command line"
+    },
+    {
+      "fingerprint": "src/beautifulnim/rules.nim:RVR:a012c05628001639:0",
+      "file": "src/beautifulnim/rules.nim",
+      "line": 103,
+      "mutator": "RVR",
+      "original": "return l",
+      "replacement": "<return default>",
+      "class": "accepted",
+      "reason": "killed by test_cli: the job that runs report.nim and rules.nim against test_cli (BN-C2 and --min-level) killed all 4 of these mutants on 2026-11-20; test_analyze does not reach the command line"
+    }
+  ]
+}

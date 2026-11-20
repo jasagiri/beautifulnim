@@ -1,0 +1,144 @@
+{
+  "survivors": [
+    {
+      "fingerprint": "src/beautifulnim/typed.nim:BLR:6ec2d660335697fb:1",
+      "file": "src/beautifulnim/typed.nim",
+      "line": 96,
+      "mutator": "BLR",
+      "original": "false",
+      "replacement": "true",
+      "class": "unreached",
+      "reason": "hasField is only called after isGetterOfValue found the parameter type, past var/sink/ptr/ref/aliases, to be an object or a tuple, and baseClass yields only objects; the else branch is not reached"
+    },
+    {
+      "fingerprint": "src/beautifulnim/typed.nim:RVR:f09e9e232af8b35b:1",
+      "file": "src/beautifulnim/typed.nim",
+      "line": 96,
+      "mutator": "RVR",
+      "original": "return false",
+      "replacement": "<return default>",
+      "class": "equivalent",
+      "reason": "return default of bool is false, the same value"
+    },
+    {
+      "fingerprint": "src/beautifulnim/typed.nim:RVR:f58cb4f69a361259:0",
+      "file": "src/beautifulnim/typed.nim",
+      "line": 108,
+      "mutator": "RVR",
+      "original": "return nvKeep",
+      "replacement": "<return default>",
+      "class": "equivalent",
+      "reason": "nvKeep is the first value of NamingVerdict, so return default is nvKeep"
+    },
+    {
+      "fingerprint": "src/beautifulnim/typed.nim:LOR:217d0047ec79ad37:0",
+      "file": "src/beautifulnim/typed.nim",
+      "line": 123,
+      "mutator": "LOR",
+      "original": "v.kind == skParam and v.typ != nil",
+      "replacement": "<and -> or>",
+      "class": "equivalent",
+      "reason": "only a parameter can have type kind tySink, and every parameter has a type after semantic analysis, so (skParam or typ != nil) and kind == tySink selects the same symbols"
+    },
+    {
+      "fingerprint": "src/beautifulnim/typed.nim:CVR:b9d8e2fd4e7f3d77:0",
+      "file": "src/beautifulnim/typed.nim",
+      "line": 134,
+      "mutator": "CVR",
+      "original": "0",
+      "replacement": "1",
+      "class": "equivalent",
+      "reason": "stopping the unwrapping at a one-element statement list changes nothing for the forms the compiler produces: probes with a doc comment, parentheses, a template returning the conversion and an untyped template gave the same findings with the mutant built (2026-11-20); no form that leaves a one-element nkStmtListExpr around the value was found"
+    },
+    {
+      "fingerprint": "src/beautifulnim/typed.nim:ROR:3b34a9ad7a377f9d:0",
+      "file": "src/beautifulnim/typed.nim",
+      "line": 134,
+      "mutator": "ROR",
+      "original": "rhs.len > 0",
+      "replacement": "<> -> >=>",
+      "class": "equivalent",
+      "reason": "the compiler gives no empty statement list as the value assigned to result, so len > 0 and len >= 0 agree"
+    },
+    {
+      "fingerprint": "src/beautifulnim/typed.nim:AOR:4a97faa22833be2c:0",
+      "file": "src/beautifulnim/typed.nim",
+      "line": 140,
+      "mutator": "AOR",
+      "original": "{nkSym, nkIdent, nkEmpty, nkNilLit, nkType} + nkLiterals",
+      "replacement": "<+ -> ->",
+      "class": "equivalent",
+      "reason": "nkLiterals is disjoint from the leaf kinds listed, so set minus leaves them; the walk then also visits literal nodes, which have no children and are never an assignment"
+    },
+    {
+      "fingerprint": "src/beautifulnim/typed.nim:SDL:e899aca0d4813254:0",
+      "file": "src/beautifulnim/typed.nim",
+      "line": 179,
+      "mutator": "SDL",
+      "original": "conf.setCmd cmdCheck",
+      "replacement": "discard",
+      "class": "equivalent",
+      "reason": "loadConfigsAndProcessCmdLine already calls conf.setCmd cmdCheck when NimProg.suggestMode is true (compiler/cmdlinehelper.nim of Nim 2.4.2); the BN-T3 test of static writeFile and staticExec passes with the line removed"
+    },
+    {
+      "fingerprint": "src/beautifulnim/typed.nim:SDL:b8c2409c2011a9fc:0",
+      "file": "src/beautifulnim/typed.nim",
+      "line": 181,
+      "mutator": "SDL",
+      "original": "conf.searchPaths.add conf.libpath",
+      "replacement": "discard",
+      "class": "equivalent",
+      "reason": "imports through the library root (pure/strutils, core/macros, system/ansi_c, packages/docutils/rst, std/strutils) resolve the same with the line removed (probe with the mutant built, 2026-11-20); kept to match what mainCommand does"
+    },
+    {
+      "fingerprint": "src/beautifulnim/typed.nim:CVR:dff54d97809ee49f:0",
+      "file": "src/beautifulnim/typed.nim",
+      "line": 183,
+      "mutator": "CVR",
+      "original": "0",
+      "replacement": "1",
+      "class": "equivalent",
+      "reason": "with one error the walk goes on, but analyzeTyped returns ok false with sink.errors whenever it is not empty, so the findings collected are discarded"
+    },
+    {
+      "fingerprint": "src/beautifulnim/typed.nim:SDL:7a20c243e5d4b388:0",
+      "file": "src/beautifulnim/typed.nim",
+      "line": 186,
+      "mutator": "SDL",
+      "original": "sink.errors.add CompileError(file: path,; message: \"the compiler did not produce a module\")",
+      "replacement": "discard",
+      "class": "unreached",
+      "reason": "compilePipelineProject yields the main module whenever it reported no error; the guard for a nil module is not reached by any input found"
+    },
+    {
+      "fingerprint": "src/beautifulnim/typed.nim:LOR:ddf0b0cee8698fbd:0",
+      "file": "src/beautifulnim/typed.nim",
+      "line": 197,
+      "mutator": "LOR",
+      "original": "s.kind in Routines and s.ast != nil",
+      "replacement": "<and -> or>",
+      "class": "equivalent",
+      "reason": "danglingCstrings reports only assignments to a result symbol, which exist only in routine bodies, so walking the ast of a non-routine finds nothing"
+    },
+    {
+      "fingerprint": "src/beautifulnim/typed.nim:ROR:cb509736a5a249d5:0",
+      "file": "src/beautifulnim/typed.nim",
+      "line": 197,
+      "mutator": "ROR",
+      "original": "s.ast.len > bodyPos",
+      "replacement": "<> -> >=>",
+      "class": "equivalent",
+      "reason": "a routine ast always has resultPos (bodyPos + 1) sons, so len > bodyPos and len >= bodyPos agree"
+    },
+    {
+      "fingerprint": "src/beautifulnim/typed.nim:SDL:a378e49c5cb64526:0",
+      "file": "src/beautifulnim/typed.nim",
+      "line": 243,
+      "mutator": "SDL",
+      "original": "sink.errors.add CompileError(file: path,; message: \"the compiler failed: \" & e.msg)",
+      "replacement": "discard",
+      "class": "unreached",
+      "reason": "the compiler raising out of semCheck is not reproduced by any test input; the branch reports instead of dropping (no tests can make the compiler raise without patching it)"
+    }
+  ]
+}
