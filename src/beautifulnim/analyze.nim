@@ -130,13 +130,16 @@ proc declares(n: PNode; name: string): bool =
 proc uses(n: PNode; name: string): int =
   ## How many times the identifier `name` is evaluated in `n` on one run through it: the
   ## branches of if, when and case count as the largest one, and names that are only looked at
-  ## (field names after a dot, inside typeof or astToStr) do not count.
+  ## (field names after a dot, inside typeof or astToStr, the type of a declaration) do not count.
   case n.kind
   of nkIdent: (if n.isIdent(name): 1 else: 0)
   of nkNone, nkEmpty, nkSym, nkType, nkCharLit .. nkNilLit: 0
   of nkDotExpr: uses(n[0], name)
   of nkBindStmt, nkMixinStmt: 0
   of nkExprColonExpr, nkExprEqExpr: uses(n[1], name)
+  of nkIdentDefs, nkConstDef, nkVarTuple:
+    # the names are declared (see `declares`) and the type is not evaluated; only the value runs
+    uses(n[^1], name)
   of nkCall, nkCommand, nkInfix, nkPrefix, nkCallStrLit:
     if n.len > 0 and n[0].isAnyIdent(NotEvaluating): 0
     else:

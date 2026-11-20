@@ -157,6 +157,15 @@ suite "BN-10 template argument used more than once":
     check not reports("template check(c: bool) =\n  var t: typeof(c)\n  if not c: echo astToStr(c)\n", bn10RepeatedTemplateArg)
   test "Given a parameter that names a variable the template declares, when analyzed, then BN-10 is not reported":
     check not reports("template withX(x, body: untyped) =\n  var x = 0\n  inc x\n  body\n", bn10RepeatedTemplateArg)
+  test "Given a parameter that names a variable the template declares and uses twice, when analyzed, then BN-10 is not reported":
+    check not reports("template withX(x, body: untyped) =\n  var x = 0\n  inc x\n  inc x\n  body\n", bn10RepeatedTemplateArg)
+  test "Given a parameter written as the type of two declarations, when analyzed, then BN-10 is not reported, since a type is not evaluated":
+    check not reports("template newPair*(T: untyped) =\n  var a: T\n  var b: T\n", bn10RepeatedTemplateArg)
+    check not reports("template c2*(T: untyped) =\n  const a: T = default(int)\n  let (b, c): (T, T) = (1, 2)\n", bn10RepeatedTemplateArg)
+  test "Given a parameter written as a declared type and evaluated twice elsewhere, when analyzed, then BN-10 is reported":
+    check reports("template t*(x: untyped) =\n  var a: x\n  echo x\n  echo x\n", bn10RepeatedTemplateArg)
+  test "Given a parameter used as the initial value of two declarations, when analyzed, then BN-10 is reported":
+    check reports("template t*(x: untyped) =\n  var a: int = x\n  var b = x\n", bn10RepeatedTemplateArg)
   test "Given an argument named again in runnableExamples, when analyzed, then BN-10 is not reported":
     check not reports("template t*(x: int): int =\n  runnableExamples:\n    doAssert t(1) == 1\n    echo x\n  x\n", bn10RepeatedTemplateArg)
   test "Given a typedesc parameter used twice, when analyzed, then BN-10 is not reported":
