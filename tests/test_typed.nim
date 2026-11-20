@@ -206,6 +206,16 @@ suite "BN-T8 a returned cstring whose string is freed on return":
   test "Given a cstring of a sink parameter, when checked, then BN-12 is reported":
     check bn12("proc f*(s: sink string): cstring =\n  cstring(s)\n") == @[2]
 
+  test "Given a cstring of a temporary that is the value of a block, if, case or try expression, when checked, then BN-12 is reported in that branch":
+    check bn12("proc f*(s: string): cstring =\n  result = (block:\n    cstring(s & \"x\"))\n") == @[3]
+    check bn12("proc f*(s: string; k: int): cstring =\n  result = if k > 0: cstring(s & \"x\") else: nil\n") == @[2]
+    check bn12("proc f*(s: string; k: int): cstring =\n  if k > 0: cstring(\"lit\") else: cstring(s & \"x\")\n") == @[2]
+    check bn12("proc f*(s: string; k: int): cstring =\n  case k\n  of 0: cstring(s & \"x\")\n  else: nil\n") == @[3]
+    check bn12("proc f*(s: string): cstring =\n  try: cstring(s & \"x\")\n  except CatchableError: cstring($s.len)\n") == @[2, 3]
+
+  test "Given an if expression whose branches are a literal and nil, when checked, then BN-12 is not reported":
+    check bn12("proc f*(k: int): cstring =\n  if k > 0: cstring(\"lit\") else: nil\n").len == 0
+
   test "Given a cstring of a parameter, a field of one, a global or a literal, when checked, then BN-12 is not reported":
     check bn12("proc f*(s: string): cstring =\n  cstring(s)\n").len == 0
     check bn12("type\n  P = object\n    label: string\nproc f*(p: P): cstring =\n  cstring(p.label)\n").len == 0

@@ -124,19 +124,39 @@ proc freedOnReturn(owner: PSym; n: PNode): bool =
   else:
     false
 
+proc valuesOf(n: PNode; leaves: var seq[PNode]) =
+  ## BN-T8: the expressions whose value `n` takes: the last expression of a statement list or a
+  ## block, and each branch of an if, a case or a try (not its finally).
+  case n.kind
+  of nkStmtListExpr, nkStmtList:
+    if n.len > 0: valuesOf(n[^1], leaves)
+  of nkBlockExpr, nkBlockStmt:
+    valuesOf(n[^1], leaves)
+  of nkIfExpr, nkIfStmt:
+    for branch in n: valuesOf(branch[^1], leaves)
+  of nkCaseStmt:
+    for i in 1 ..< n.len: valuesOf(n[i][^1], leaves)
+  of nkTryStmt:
+    valuesOf(n[0], leaves)
+    for i in 1 ..< n.len:
+      if n[i].kind == nkExceptBranch: valuesOf(n[i][^1], leaves)
+  else:
+    leaves.add n
+
 proc danglingCstrings(owner: PSym; n: PNode; found: var seq[Finding]) =
   ## BN-T8: each assignment to `result` (also the one a `return x` or a last expression becomes)
   ## of a `cstring` converted from a string that is freed when `owner` returns.
   if n.isNil: return
   if n.kind == nkAsgn and n.len == 2 and n[0].kind == nkSym and n[0].sym.kind == skResult:
     # A routine with a `##` comment wraps its last expression with the comment (nkStmtListExpr).
-    var rhs = n[1]
-    while rhs.kind in {nkStmtListExpr, nkStmtList} and rhs.len > 0: rhs = rhs[^1]
-    if rhs.kind in {nkConv, nkHiddenStdConv} and rhs.typ != nil and rhs.typ.kind == tyCstring:
-      let src = rhs[^1]
-      if src.typ != nil and src.typ.skipTypes(Transparent).kind == tyString and
-          freedOnReturn(owner, src):
-        found.add initFinding(bn12DanglingCstring, int(rhs.info.line), int(rhs.info.col) + 1)
+    var values: seq[PNode]
+    valuesOf(n[1], values)
+    for rhs in values:
+      if rhs.kind in {nkConv, nkHiddenStdConv} and rhs.typ != nil and rhs.typ.kind == tyCstring:
+        let src = rhs[^1]
+        if src.typ != nil and src.typ.skipTypes(Transparent).kind == tyString and
+            freedOnReturn(owner, src):
+          found.add initFinding(bn12DanglingCstring, int(rhs.info.line), int(rhs.info.col) + 1)
   if n.kind notin {nkSym, nkIdent, nkEmpty, nkNilLit, nkType} + nkLiterals:
     for c in n: danglingCstrings(owner, c, found)
 

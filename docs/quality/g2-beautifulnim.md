@@ -25,11 +25,6 @@ How the numbers came about:
   unreached, each with its reason. Equivalence that rests on what the compiler produces was
   checked by building the mutant and running it on probe files, as the reasons say.
 
-## Found while probing, not in the specification
-
-- BN-12 does not see a conversion inside a block expression (`result = (block: cstring(s & "x"))`):
-  `danglingCstrings` unwraps statement lists but not `nkBlockExpr`.
-
 ## Running it again
 
 - With Xcode's license not accepted, the C compiler fails; `DEVELOPER_DIR=/Library/Developer/CommandLineTools`
