@@ -6,14 +6,17 @@ only when none is undecided, test_owed or spec_question.
 
 | Scope (sources) | Tests run per mutant | Mutants (compile errors left out) | Killed | Survived | Ledger | check |
 |---|---|---|---|---|---|---|
-| `analyze.nim` | `test_analyze`, `test_lints`, `test_examples` | 227 | 207 | 20 | `survivors-analyze.json` | 1: one spec_question |
+| `analyze.nim` | `test_analyze`, `test_lints`, `test_examples` | 228 | 209 | 19 | `survivors-analyze.json` | 0 |
 | `report.nim`, `rules.nim` | `test_cli` | 4 | 4 | 0 | (in `survivors-analyze.json`, accepted, with the reason) | — |
 | `cli.nim` | `test_cli` | 60 | 56 | 4 | `survivors-cli.json` | 0 |
 | `typed.nim` | `test_typed`, `test_cli` | 158 | 144 | 14 | `survivors-typed.json` | 0 |
 
 How the numbers came about:
 
-- `analyze.nim`: 73.1% at first; the tests added in 23bd1946 brought it to 91.2%.
+- `analyze.nim`: 73.1% at first; the tests added in 23bd1946 brought it to 91.2%. The one
+  spec_question (a parameter used as the type of a declaration counted as an evaluation for
+  BN-10) was answered in the specification: a type is not evaluated. The changed lines were
+  measured again: 209 of 228 (91.7%), one more mutant coming from the new branch of `uses`.
 - `cli.nim`: 86.7% at first; dde9dea5 brought it to 93.3%. The 4 survivors are equivalent.
 - `typed.nim`: 105 of 158 killed by `test_typed` alone (66.5%); `test_cli` killed 23 more. Of the
   30 left, the tests of 7739a5ab and of the commit after it killed 16, and the fix of BN-11 in
@@ -21,12 +24,6 @@ How the numbers came about:
   were measured again with both test files after the fix; the 14 left are 11 equivalent and 3
   unreached, each with its reason. Equivalence that rests on what the compiler produces was
   checked by building the mutant and running it on probe files, as the reasons say.
-
-## Open
-
-- `analyze.nim:117` (spec_question): a template parameter used as a type in a declaration in the
-  body (`var a: T` twice) counts as two evaluations for BN-10. Whether a type position is an
-  evaluation is a question for the specification, not for a test.
 
 ## Found while probing, not in the specification
 
