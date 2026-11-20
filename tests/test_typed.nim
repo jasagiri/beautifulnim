@@ -73,6 +73,10 @@ suite "BN-T6 a type with =destroy and no =copy":
   test "Given types without hooks, and a field whose type has its own hooks, when checked, then BN-11 is not reported":
     check bn11("type\n  A = object\n    s: seq[int]\n  B = object\n    a: A\n    t: string\n").len == 0
 
+  test "Given an alias of string and a distinct string that is converted to, when checked, then BN-11 is not reported, since their =destroy is the one system gives string":
+    check bn11("type D = string\n").len == 0
+    check bn11("type D = distinct string\nlet d = D(\"a\")\necho string(d)\n").len == 0
+
   removeDir(work)
 
 suite "BN-L1 lint check files of typed rules":

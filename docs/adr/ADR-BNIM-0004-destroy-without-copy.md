@@ -72,3 +72,12 @@ Option B. Rule BN-11 (level error, guide section 3), reported by `check --typed`
 ## Rejected
 
 - Option A: a second owner of hook binding, which the compiler already answers.
+
+## 訂正 (2026-11-20)
+
+RC-1: the decision read "a user `=destroy`" as the hook's `sfOverridden` flag alone. An alias
+(`type D = string`) or a distinct type of `string` that is converted to reaches the `=destroy`
+system declares for `string`, which carries that flag, and was reported as BN-11 at level error.
+A type's hooks are written in the module of the type, so a hook counts only when it is declared in
+the checked module (`userHook` in `src/beautifulnim/typed.nim`); docs/specification.md BN-T6
+says so. Found by mutation testing of `typed.nim` on 2026-11-20.
