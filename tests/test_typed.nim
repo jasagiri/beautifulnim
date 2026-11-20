@@ -34,6 +34,21 @@ suite "BN-T5 standard library":
 
   removeDir(work)
 
+suite "BN-T2 any file that compiles":
+  let work = getTempDir() / "beautifulnim-typed-any"
+  removeDir(work)
+  createDir(work)
+
+  test "Given a public enum, const, let and a proc using them at the top level, when analyzeTyped runs, then it succeeds with no findings":
+    let file = work / "e.nim"
+    writeFile(file, "type Color* = enum\n  cRed, cGreen\nconst k* = 3\nlet v* = cRed\nproc show*(c: Color): string = $c\n")
+    let a = analyzeTyped(file)
+    check a.ok
+    check a.errors.len == 0
+    check a.findings.len == 0
+
+  removeDir(work)
+
 suite "BN-T6 a type with =destroy and no =copy":
   let work = getTempDir() / "beautifulnim-typed-hooks"
   removeDir(work)
@@ -196,6 +211,9 @@ suite "BN-T8 a returned cstring whose string is freed on return":
     check bn12("type\n  P = object\n    label: string\nproc f*(p: P): cstring =\n  cstring(p.label)\n").len == 0
     check bn12("var g = \"abc\"\nproc f*(): cstring =\n  cstring(g)\n").len == 0
     check bn12("proc f*(): cstring =\n  cstring(\"abc\")\n").len == 0
+
+  test "Given a cstring converted from a local cstring, when checked, then BN-12 is not reported, since no string is freed":
+    check bn12("proc f*(): cstring =\n  let c: cstring = \"a\"\n  result = cstring(c)\n").len == 0
 
   test "Given a cstring returned by a call and a conversion of a temporary to a distinct string, when checked, then BN-12 is not reported":
     check bn12("proc g(x: string): cstring = \"lit\"\nproc h*(s: string): cstring = g(s & \"x\")\n").len == 0
