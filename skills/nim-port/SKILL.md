@@ -55,6 +55,9 @@ Decide the public types and procs first (guide section 4), then fill them in unt
 | class hierarchy with virtual methods | object variant + `case`; `method` only for an open set |
 | `malloc`/`free`, RAII, `Drop` | value types; `=destroy` for resources |
 | `std::shared_ptr`, `Rc` | `ref` (only where sharing is real) |
+| C++ raw pointer or reference, Rust `&` / `&mut` | a plain parameter (a borrow) or a `var` parameter; an index into the owning `seq` when it is stored. Not `ref`, not a copy |
+| Rust `.clone()`, a C++ copy constructor | a copy where the original copies; elsewhere a move or a borrow |
+| `Rc<RefCell<T>>`, `Arc<Mutex<T>>`, a back pointer (`parent`) | one owner holding the values, indices elsewhere; a lock only for data the original shares between threads; a parent as an index or `{.cursor.}` |
 | Python `dict` (insertion order) | `OrderedTable` when order is observable, else `Table` |
 | Python `bytes`, JS `Uint8Array` | `seq[byte]` |
 | JS `number` | `int` or `float` chosen per use; check ranges |
@@ -83,6 +86,11 @@ Decide the public types and procs first (guide section 4), then fill them in unt
 
 - `nim check` clean with `lints/nim.cfg`, all ported tests green, `beautifulnim check
   --min-level:warning` with nothing to report (or a reason for each).
+- When the original is fast by design (a game loop, a parser, an inner loop), a port that
+  compiles and passes its tests can still copy or allocate on every iteration. Run the same
+  workload on both, compare the allocation counts and the time
+  (`skills/nim-best-practices/details/escape-hatches.md`), and list each new copy or allocation on
+  the hot path in PORTING.md with its reason.
 - Run both versions on the same inputs where possible and compare outputs byte for byte. List
   the inputs that only one side can take (invalid UTF-8 for a Python `str`, numbers past
   `int64`), and name the test that covers each. For an input only the port can take, choose
