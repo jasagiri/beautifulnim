@@ -43,6 +43,10 @@ the setting disagree.
    confirm it in context before reporting it.
 3. The project's tests. A failing test is the first finding. If there are none, say so in the
    summary and name the behaviour a test should pin down.
+4. Ported or generated code, or code on a hot path: a green build and green tests are not the
+   acceptance. List each copy, `ref`, `cast` and `cast` pragma the change adds and the check it
+   gets past, and count the allocations of the hot path (`-d:nimAllocStats`), against the
+   original when there is one.
 
 Probes go through the public API and `import` the module. Only to reach private state, probe a
 copy of the module under a new name (`ledger_probe.nim`) with the needed symbols exported, and a
@@ -63,7 +67,11 @@ findings the tools caught and which came from reading.
    so Must fix), integer and
    range conversions from untrusted input (the fix: parse, check the bounds, then convert;
    nim-best-practices section 5), `cast`/`ptr`/`addr` without a soundness argument, a `cstring` outliving its `string`, missing `=destroy` or double ownership,
-   `{.cast(gcsafe).}` hiding a data race, shared state without a lock.
+   `{.cast(gcsafe).}` hiding a data race, shared state without a lock. A change that only gets a
+   check to pass: a copy of a value that is used again (a `=copy` inside a loop under
+   `--expandArc`), a `ref` with one owner, a module-level `var`, `{.cast(noSideEffect).}` or
+   `{.cast(raises: []).}`, an `{.acyclic.}` type that can reach itself, a closure that captures the
+   object holding it (`skills/nim-best-practices/details/escape-hatches.md`).
 2. **Error handling** — `except` that only discards (BN-01), `except Exception:`, exported procs
    without `raises`, exception types inheriting from `Exception`, errors turned into default values,
    `asyncCheck` on futures that can fail, destructors that raise, an `except` for a subtype after
