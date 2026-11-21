@@ -35,7 +35,8 @@ off, read the rest by line range before you start.
   (section 2), tests in `tests/` beside it run with `nim c -r` (section 11), probes in a
   directory of their own, importing the module as `../<module>`.
 - **Details**: read the `details/` file a section names before writing that kind of code;
-  `details/ffi.md` before `importc`, a C callback, `cast` or `ptr`.
+  `details/ffi.md` before `importc`, a C callback, `cast` or `ptr`; `details/escape-hatches.md`
+  when a check stops you.
 
 ## 1. Mindset
 
@@ -88,8 +89,8 @@ off, read the rest by line range before you start.
 - **Fix warnings, do not silence them (BN-04).** No `{.push warnings: off.}`, `{.warning[X]: off.}`
   or `{.hint[X]: off.}` in source and no `--warnings:off` in a project's `nim.cfg`. If a compiler
   bug forces one, scope it to one statement and name the compiler issue in a comment; `beautifulnim check`
-  still reports it so a reviewer decides. (`--hints:off` on the command line for quieter test output
-  is fine; it changes nothing in the code.)
+  still reports it so a reviewer decides. (`--hints:off` on the command line is fine; it changes
+  no code.)
 - Spell every identifier exactly as declared. Nim matches `readAll`, `read_all` and `readall` as the
   same name; `--styleCheck:error` stops the mixture (Status).
 
@@ -105,9 +106,8 @@ off, read the rest by line range before you start.
   results as a tuple or object, not through `var` out-parameters (manual).
 - **`ref` only when you need reference semantics** (Status): a handle to a resource that must not be
   copied, real shared ownership, linked structures (trees, graphs), or a stable address for foreign
-  code. When both forms exist, the value type gets the plain name and the other `FooRef` (NEP1
-  gives the plain name to the variety used most; the Status guide always suffixes `Ref`; follow the
-  project).
+  code; not to escape a copy or `var` error. When both forms exist, the value type gets the plain
+  name and the other `FooRef` (Status always adds `Ref`; follow the project).
 - **Resources and hooks.** A type that owns memory or an operating-system resource decides what
   a copy does (`=copy {.error.}` or a deep `=copy`); `=destroy` is for a raw pointer or OS
   handle, not a `seq` field. Read `details/ownership.md` before writing either.
@@ -354,7 +354,7 @@ doAssert squares(3) == @[0, 1, 4]
   When the specification itself requires a write to stderr, write to `stderr`: the rule is about
   diagnostics nobody specified.
 - Two-space indent, no tabs; lines up to 80 characters (NEP1; the Status guide uses `nph`, which
-  wraps at 88 — follow the project's formatter; with none, 80). Do not align with extra spaces.
+  wraps at 88; follow the project's formatter). Do not align with extra spaces.
 
 ## 7. Concurrency and async
 
@@ -426,7 +426,6 @@ func firstOf*(xs: openArray[int]; parity: Parity): Option[int] {.raises: [].} =
 
 ## 11. Tests
 - `std/unittest` with `suite`/`test`, files under `tests/` named `t*.nim` (or the project's task).
-  `check` prints the values of both sides when it fails.
 - Name tests by behaviour ("Given…, when…, then…"), test properties (round-trip, idempotence,
   ordering) rather than restating constants, and write the failing test before fixing a bug.
 - Inject time, randomness and I/O as parameters (proc types or objects of closures), so tests do
@@ -464,7 +463,8 @@ func firstOf*(xs: openArray[int]; parity: Parity): Option[int] {.raises: [].} =
   explicit `close`.
 - NEP1 names; identifiers spelled as declared.
 - `##` docs with a summary line on every exported symbol; examples in `runnableExamples`.
-- Every `cast`, `ptr`, `addr` and disabled check has a comment saying why it is sound.
+- Every `cast`, `ptr`, `addr` and disabled check has a comment saying why it is sound; no copy,
+  `ref` or `cast` pragma just to pass a check; hot paths measured.
 - Templates and macros only where a proc cannot do it; hygienic, each argument evaluated once
   unless the doc comment says otherwise, trees built with `genAst`/`quote`, misuse reported at the
   caller's node.
