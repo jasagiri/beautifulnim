@@ -1,7 +1,9 @@
 # Code that compiles but reads wrong
 
 Part of nim-best-practices section 2. Read it once. Each item is accepted by Nim 2.4 without a
-warning, or rejected with an error that does not name the cause.
+warning, or rejected with an error that does not name the cause. When a check stops you (a
+forbidden copy, an effect error, the length assertion of a `for` loop whose `seq` changed),
+`details/escape-hatches.md` says what to change instead of getting past it.
 
 - A space before `(` turns a call into a command call. `f (1, 2)` passes the tuple `(1, 2)` as
   one argument; `f(1, 2)` passes two.

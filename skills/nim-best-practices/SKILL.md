@@ -36,7 +36,7 @@ off, read the rest by line range before you start.
   directory of their own, importing the module as `../<module>`.
 - **Details**: read the `details/` file a section names before writing that kind of code;
   `details/ffi.md` before `importc`, a C callback, `cast` or `ptr`; `details/escape-hatches.md`
-  when a check stops you.
+  when a check or assertion stops you.
 
 ## 1. Mindset
 
@@ -89,8 +89,7 @@ off, read the rest by line range before you start.
 - **Fix warnings, do not silence them (BN-04).** No `{.push warnings: off.}`, `{.warning[X]: off.}`
   or `{.hint[X]: off.}` in source and no `--warnings:off` in a project's `nim.cfg`. If a compiler
   bug forces one, scope it to one statement and name the compiler issue in a comment; `beautifulnim check`
-  still reports it so a reviewer decides. (`--hints:off` on the command line is fine; it changes
-  no code.)
+  still reports it so a reviewer decides. (`--hints:off` on the command line is fine.)
 - Spell every identifier exactly as declared. Nim matches `readAll`, `read_all` and `readall` as the
   same name; `--styleCheck:error` stops the mixture (Status).
 

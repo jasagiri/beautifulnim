@@ -31,7 +31,9 @@ the setting disagree.
 
 1. `nim check` on the files with the project's `nim.cfg`, then again with the lines of
    `lints/nim.cfg` added (with no project `nim.cfg`, one run with `lints/nim.cfg` copied as
-   `nim.cfg` next to a copy of the files). When the code defines hooks, also `nim c` a driver that
+   `nim.cfg` next to a copy of the files; when the project's `nim.cfg` already is that copy, one
+   run covers both). `--skipProjCfg` leaves out the `nim.cfg` next to the files and
+   `--skipParentCfg` those of the directories above, for a run without them. When the code defines hooks, also `nim c` a driver that
    calls every exported routine: `nim check` does not report a forbidden copy, and `nim c` checks
    only the routines a program calls, so `nim c` of the module alone checks none (nim-best-practices section 2). Every error is a finding. For a loose file, or a file whose name is not a
    Nim identifier, follow nim-best-practices section 2 (copy, `nim.cfg` next to it, `nim doc` when
@@ -70,8 +72,9 @@ findings the tools caught and which came from reading.
    `{.cast(gcsafe).}` hiding a data race, shared state without a lock. A change that only gets a
    check to pass: a copy of a value that is used again (a `=copy` inside a loop under
    `--expandArc`), a `ref` with one owner, a module-level `var`, `{.cast(noSideEffect).}` or
-   `{.cast(raises: []).}`, an `{.acyclic.}` type that can reach itself, a closure that captures the
-   object holding it (`skills/nim-best-practices/details/escape-hatches.md`).
+   `{.cast(raises: []).}`. A cycle nothing frees in time: an `{.acyclic.}` type whose values can
+   reach themselves, a closure that captures the object holding it
+   (`skills/nim-best-practices/details/escape-hatches.md`).
 2. **Error handling** — `except` that only discards (BN-01), `except Exception:`, exported procs
    without `raises`, exception types inheriting from `Exception`, errors turned into default values,
    `asyncCheck` on futures that can fail, destructors that raise, an `except` for a subtype after
@@ -113,7 +116,9 @@ checks something (nim check, beautifulnim, a build, a test, a probe, a sanitizer
   state or from a valid call order, whether it is a `Defect` or happens below Nim (a segfault on a
   `nil` passed to C, C undefined behaviour); memory or thread unsafety; swallowed errors; security;
   code that does not compile in a build the project ships (a forbidden copy that only `nim c` of a
-  caller shows counts). The fix for a `Defect` that external input can reach, or a value the
+  caller shows counts); memory that is never freed (a cycle of an `{.acyclic.}` type, any cycle
+  under ARC, when the project ships ARC); an effect hidden by a `cast` pragma (a global write under `{.cast(noSideEffect).}`).
+  A cycle that ORC frees only at its next collection is Should fix when the project ships ORC. The fix for a `Defect` that external input can reach, or a value the
   caller cannot check before the call (a sum that overflows), is to check the value and raise a
   `CatchableError` (nim-best-practices section 5), not to document the `Defect`. A precondition
   the caller can check (an index below `len`) may stay a `Defect` named in the `##` comment, as
@@ -125,7 +130,9 @@ checks something (nim check, beautifulnim, a build, a test, a probe, a sanitizer
 - Tier by the build the project ships (the default build, checks on, when nothing says
   otherwise), not `-d:danger`. When `-d:danger` turns the Defect into a silent wrong result, say
   so in the finding.
-- **Should fix**: API and error-handling rules that will cost callers later.
+- **Should fix**: API and error-handling rules that will cost callers later; a `func` that writes
+  through a `ref` its parameters reach, with no `cast`; a copy or allocation per iteration on a
+  hot path that you measured (Consider when only read).
 - A `raises` list does not track Defects, so `raises: []` on a proc that can hit one is legal:
   the finding is the reachable Defect, not the annotation. A missing `##` or a missing `raises` list
   on an exported routine is Should fix.
@@ -146,7 +153,8 @@ checks something (nim check, beautifulnim, a build, a test, a probe, a sanitizer
   `string` that later grows, `cast`, `UncheckedArray`, `cstring` lifetimes in section 8 and
   `skills/nim-best-practices/details/ffi.md`; threads, `{.cast(gcsafe).}` and `asyncCheck` in
   `skills/nim-best-practices/details/concurrency.md`; templates and macros in
-  `skills/nim-best-practices/details/templates-and-macros.md`.
+  `skills/nim-best-practices/details/templates-and-macros.md`; shortcuts past a check, cycles and
+  per-frame copies in `skills/nim-best-practices/details/escape-hatches.md`.
 - "What is already good" is required; it tells the author what not to change.
 - Write the review in the language of the pull request or the project's documentation; with
   neither, in the language of the request.

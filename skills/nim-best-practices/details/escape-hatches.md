@@ -1,7 +1,7 @@
 # When a check stops you
 
-Part of nim-best-practices section 0. Read it when a compiler error, a failed effect check or a
-forbidden copy stops you, and before handing back code that was ported or generated in bulk.
+Part of nim-best-practices section 0. Read it when a compiler error, a failed effect check, a
+forbidden copy or a run-time check (the length assertion of a `for` loop) stops you, and before handing back code that was ported or generated in bulk.
 
 A check that stops you says the shape of the code is wrong for what the check guards: ownership,
 effects, types. Change the shape. A change whose only purpose is to make the error go away (a
@@ -72,7 +72,9 @@ write an error.
 
 - `{.acyclic.}` is a promise the compiler does not check. A cycle built from an `{.acyclic.}`
   type is never freed, not even by `GC_fullCollect()`, and nothing warns. Put it only on a type
-  that cannot reach itself (no parent pointer, no field of its own type that could point back).
+  whose values can never reach themselves: a tree whose nodes own their children and keep no
+  pointer back up qualifies; a parent pointer, a back edge or a child shared by two parents does
+  not.
 - A closure stored in an object that captures that object is a cycle. ARC never frees it and
   warns `CycleCreated`; ORC frees it only when the cycle collector runs, so a resource it owns is
   released later than the end of the scope. Pass the object to the callback as a parameter
@@ -85,11 +87,13 @@ write an error.
 For code on a hot path (every frame, every request, every element), check the cost as well as the
 result. Two checks a machine can repeat:
 
-- `--expandArc:procName` prints the proc after the compiler inserted copies and destroys. A
+- `--expandArc:procName` prints the proc after the compiler inserted copies and destroys, if
+  the program calls the proc (build a probe that calls it; a module alone prints nothing). A
   `=copy` inside a loop is an allocation per iteration when the value holds a `seq`, `string` or
   `ref`.
 - `-d:nimAllocStats` counts allocations; `getAllocStats()` reads the count. The fields are
-  private, so compare differences with `default(AllocStats)`. Without the define,
+  private: `$(getAllocStats() - before)` prints both counts (`(allocCount: 100, deallocCount:
+  100)`), and a check compares the difference with `default(AllocStats)`. Without the define,
   `getAllocStats()` always returns zero and every such check passes, so first check that a known
   allocation is counted:
 
@@ -103,10 +107,15 @@ proc main() =
   var total = 0
   for x in xs: total += x
   doAssert getAllocStats() - start == default(AllocStats), "the read loop allocates"
+  echo "read loop: ", getAllocStats() - start   # (allocCount: 0, deallocCount: 0)
   doAssert total == 1
 
 main()
 ```
+
+When the task names a cost but no workload ("thousands of units", "every frame"), build a
+workload of that size in a probe outside the deliverable and report the counts; a cost argued
+from reading the code alone is reported as read, not measured.
 
 When the code replaces an original (a port, a rewrite), compare the counts and the time of the
 same workload on both, and list each new copy or allocation on the hot path with its reason.

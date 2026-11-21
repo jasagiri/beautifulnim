@@ -90,7 +90,11 @@ Decide the public types and procs first (guide section 4), then fill them in unt
   compiles and passes its tests can still copy or allocate on every iteration. Run the same
   workload on both, compare the allocation counts and the time
   (`skills/nim-best-practices/details/escape-hatches.md`), and list each new copy or allocation on
-  the hot path in PORTING.md with its reason.
+  the hot path in PORTING.md with its reason. Count the original's allocations with its own
+  tools (a counting allocator, `heaptrack`, `valgrind`); when that is not possible, write the
+  count read from its code and mark it as read, not measured. The comparison is required when
+  the task names a cost (a frame, a hot path, a size); a step that cannot run is "not run" with
+  the reason (nim-best-practices section 0).
 - Run both versions on the same inputs where possible and compare outputs byte for byte. List
   the inputs that only one side can take (invalid UTF-8 for a Python `str`, numbers past
   `int64`), and name the test that covers each. For an input only the port can take, choose
