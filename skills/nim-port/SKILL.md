@@ -98,9 +98,8 @@ Decide the public types and procs first (guide section 4), then fill them in unt
   (Rust `#[global_allocator]`, a `malloc` wrapper in C) and say which events it counts (when the
   two sides count different events, such as `realloc`, compare only the ratio); when
   that is not possible, write the count read from its code and mark it as read, not measured.
-  Time each side at least 5 runs and give the median with the minimum and maximum. Probes,
-  benchmarks and builds of the original are not deliverables: keep them in a directory of
-  their own and name them under "How it was verified". The comparison is required when
+  Time each side over at least 5 runs of the whole workload and give the median with the minimum and maximum. Probes,
+  benchmarks and builds of the original are not deliverables: keep them in `probe/` and name them under "How it was verified". The comparison is required when
   the task names a cost (a frame, a hot path, a size); a step that cannot run is "not run" with
   the reason (nim-best-practices section 0).
 - Run both versions on the same inputs where possible and compare outputs byte for byte. List

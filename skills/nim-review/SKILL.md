@@ -22,7 +22,7 @@ the setting disagree.
   annotations and no global state; applications to clarity and error reporting. A module inside
   a service is application code, unless other packages import it. With no project, the file is a
   project of one (nim-best-practices section 0): library rules when the request says other code
-  imports it, application rules otherwise, tiered by the default build (section 4).
+  imports it or that it goes into a library, application rules otherwise, tiered by the default build (section 4).
 - Nim version and memory manager (`nim -v`, the `requires "nim >= …"` line, `--mm`), and the
   project's own conventions (constructor style `initFoo` vs `Foo.init`, `results` vs exceptions,
   `asyncdispatch` vs `chronos`, formatter). Judge by those, and say where they differ from the guide.
@@ -47,13 +47,15 @@ the setting disagree.
    summary and name the behaviour a test should pin down.
 4. Ported or generated code, or code on a hot path: a green build and green tests are not the
    acceptance. List each copy, `ref`, `cast` and `cast` pragma the change adds and the check it
-   gets past, and count the allocations of the hot path (`-d:nimAllocStats`), against the
+   gets past, and count the allocations of the hot path as
+   `skills/nim-best-practices/details/escape-hatches.md` shows (build with `-d:nimAllocStats`, or
+   every count reads 0; the fields are private, so print the difference with `$`), against the
    original when there is one.
 
 Probes go through the public API and `import` the module. Only to reach private state, probe a
 copy of the module under a new name (`ledger_probe.nim`) with the needed symbols exported, and a
 separate probe file that imports it; leave the module itself unchanged. Say in the summary that
-you did. Put probes in their own directory: every file next to a copied `nim.cfg` is checked
+you did. Put probes in `probe/` beside the files: every file next to a copied `nim.cfg` is checked
 under it, so an unused import in a probe becomes an error.
 
 Report what the tools found as tool findings; do not re-derive them by reading. The tools miss
@@ -127,8 +129,8 @@ checks something (nim check, beautifulnim, a build, a test, a probe, a sanitizer
   replaced by a default or skipped without a word in the doc comment. A data race or a memory
   error you can show by reading the code is Must fix even when a probe does not reproduce it:
   such bugs depend on timing and the allocator. Say whether you reproduced it.
-- Tier by the build the project ships (the default build, checks on, when nothing says
-  otherwise), not `-d:danger`. When `-d:danger` turns the Defect into a silent wrong result, say
+- Tier by the build the project ships (Nim's defaults, ORC with checks on, when no `nim.cfg` or
+  task sets them), not `-d:danger`. When `-d:danger` turns the Defect into a silent wrong result, say
   so in the finding.
 - **Should fix**: API and error-handling rules that will cost callers later; a `func` that writes
   through a `ref` its parameters reach, with no `cast`; a copy or allocation per iteration on a

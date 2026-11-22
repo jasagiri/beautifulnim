@@ -32,8 +32,8 @@ off, read the rest by line range before you start.
   directory you may not write outside): write "not run" with the reason and what you did instead,
   and go on.
 - **No project**: treat the file as a project of one: a copy of `lints/nim.cfg` next to it
-  (section 2), tests in `tests/` beside it run with `nim c -r` (section 11), probes in a
-  directory of their own, importing the module as `../<module>`.
+  (section 2), tests in `tests/` beside it run with `nim c -r` (section 11), probes in `probe/`
+  beside it, importing the module as `../<module>`.
 - **Details**: open the file for what is in front of you, and name in your notes the ones you
   read: `details/escape-hatches.md` when a check stops you (a forbidden copy, an effect error,
   "the length of the seq changed while iterating") and for a cycle or a hot path;

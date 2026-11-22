@@ -65,7 +65,9 @@ doAssert not units[0].alive and units[1].hp == 40
 A loop that only changes fields of the elements (`for u in units.mitems: u.hp -= d`) keeps the
 length and needs no plan; only adding and removing wait for the end of the loop. Collect the
 additions in a local `seq` and `add` them after it; remove many elements in one pass with
-`keepItIf`, not `delete` in a loop, which shifts the rest on every call.
+`keepIf(proc (u: Unit): bool = u.hp > 0)`, not `delete` in a loop, which shifts the rest on every
+call. Not `keepItIf` on a hot path: its `it` is a copy of each element, an allocation per element
+that holds a `string` or `seq` (Nim 2.4.2: 5000 for 5000 units; `keepIf`: 0).
 
 `openArray[T]` in the reading routine cannot grow or shrink the collection, and a `func` cannot
 touch global state. A `func` can still write through a `ref` that a parameter reaches: with
@@ -85,7 +87,9 @@ write an error.
   released later than the end of the scope. Pass the object to the callback as a parameter
   (`proc (b: Button)`) instead of capturing it, or keep the callbacks in one owner and refer to
   the objects by index.
-- A parent pointer: an index into the owner's `seq`, or `{.cursor.}` (`details/ownership.md`).
+- A parent pointer: an index into the owner's `seq` by default (a stale one reads the wrong
+  element or fails a bounds check, but never reads freed memory); `{.cursor.}` only when every parent outlives its
+  children, because a cursor to a freed parent dangles with no check (`details/ownership.md`).
 
 ## Measure what the tests do not
 
@@ -118,8 +122,8 @@ proc main() =
 main()
 ```
 
-When the task names a cost but no workload ("thousands of units", "every frame"), build a
-workload of that size in a probe outside the deliverable and report the counts; a cost argued
+When the task names a cost ("thousands of units", "every frame"), build a workload at the
+largest size it names in a probe outside the deliverable and report the counts; a cost argued
 from reading the code alone is reported as read, not measured.
 
 When the code replaces an original (a port, a rewrite), compare the counts and the time of the
