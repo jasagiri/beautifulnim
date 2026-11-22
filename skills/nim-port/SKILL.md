@@ -98,7 +98,8 @@ Decide the public types and procs first (guide section 4), then fill them in unt
   (Rust `#[global_allocator]`, a `malloc` wrapper in C) and say which events it counts (when the
   two sides count different events, such as `realloc`, compare only the ratio); when
   that is not possible, write the count read from its code and mark it as read, not measured.
-  Time each side over at least 5 runs of the whole workload and give the median with the minimum and maximum. Probes,
+  Time one pass over the workload (setup excluded), each side in its release build (`-d:release`,
+  `rustc -O`, `-O2`; not `-d:danger`), at least 5 runs, and give the median with the minimum and maximum. Probes,
   benchmarks and builds of the original are not deliverables: keep them in `probe/` and name them under "How it was verified". The comparison is required when
   the task names a cost (a frame, a hot path, a size); a step that cannot run is "not run" with
   the reason (nim-best-practices section 0).
@@ -122,4 +123,5 @@ these sections there and write no second file.
 - Deliberate differences, each with the reason (for example "raises ConfigError instead of
   returning -1").
 - Preserved quirks and bugs, each pinned by a test.
-- How it was verified: the commands and their exit codes.
+- How it was verified: the commands and their exit codes (the command's own, not a filter's:
+  `set -o pipefail`, or run it alone; a code you did not capture is "not captured").

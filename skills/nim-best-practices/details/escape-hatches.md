@@ -26,8 +26,9 @@ asks. "It compiled" is not that reason.
 When a loop must change the collection it reads (a unit that dies, an element that spawns
 another), do not reach for `ref` or a copy of the collection. Read in one loop and record the
 changes as values; apply them after the loop. The `for` loop over a `seq` asserts that the length
-does not change while it runs, so adding inside it fails at run time (unless `-d:danger` removed
-the assertion, and then it reads past the old length).
+does not change while it runs, so adding inside it fails at run time (unless the program was
+compiled with `-d:danger`, which removes the assertion: then it reads past the old length. The
+`-d:danger` that `nim -v` lists is how the compiler itself was built).
 
 ```nim
 type
@@ -65,7 +66,7 @@ doAssert not units[0].alive and units[1].hp == 40
 A loop that only changes fields of the elements (`for u in units.mitems: u.hp -= d`) keeps the
 length and needs no plan; only adding and removing wait for the end of the loop. Collect the
 additions in a local `seq` and `add` them after it; remove many elements in one pass with
-`keepIf(proc (u: Unit): bool = u.hp > 0)`, not `delete` in a loop, which shifts the rest on every
+`keepIf(proc (u: Unit): bool = u.hp > 0)` (`std/sequtils`), not `delete` in a loop, which shifts the rest on every
 call. Not `keepItIf` on a hot path: its `it` is a copy of each element, an allocation per element
 that holds a `string` or `seq` (Nim 2.4.2: 5000 for 5000 units; `keepIf`: 0).
 
@@ -123,7 +124,8 @@ main()
 ```
 
 When the task names a cost ("thousands of units", "every frame"), build a workload at the
-largest size it names in a probe outside the deliverable and report the counts; a cost argued
+largest size it names in a probe outside the deliverable (to reach symbols the module does not
+export, probe a copy of it with them exported; leave the module unchanged) and report the counts; a cost argued
 from reading the code alone is reported as read, not measured.
 
 When the code replaces an original (a port, a rewrite), compare the counts and the time of the

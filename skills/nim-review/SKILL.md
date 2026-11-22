@@ -129,8 +129,8 @@ checks something (nim check, beautifulnim, a build, a test, a probe, a sanitizer
   replaced by a default or skipped without a word in the doc comment. A data race or a memory
   error you can show by reading the code is Must fix even when a probe does not reproduce it:
   such bugs depend on timing and the allocator. Say whether you reproduced it.
-- Tier by the build the project ships (Nim's defaults, ORC with checks on, when no `nim.cfg` or
-  task sets them), not `-d:danger`. When `-d:danger` turns the Defect into a silent wrong result, say
+- Tier by the build the project ships (Nim's defaults, ORC with checks on, when no `--mm`, `-d:release` or
+  `-d:danger` in a `nim.cfg` or the task sets them; lint settings do not), not `-d:danger`. When `-d:danger` turns the Defect into a silent wrong result, say
   so in the finding.
 - **Should fix**: API and error-handling rules that will cost callers later; a `func` that writes
   through a `ref` its parameters reach, with no `cast`; a copy or allocation per iteration on a
@@ -145,7 +145,8 @@ checks something (nim check, beautifulnim, a build, a test, a probe, a sanitizer
 - **Consider**: idiom and style; at most a handful, grouped by kind rather than repeated per line.
 - Every finding has a place, a rule and a fix. The fix is a code snippet; when the change is to a
   doc comment, the snippet is the new comment; when only the author can decide, write the question
-  and a snippet for each answer you would accept; when the change is not code (tests to add, a
+  and a snippet for each answer you would accept; a fix that changes an exported signature shows
+  it before and after and names the change at the call sites; when the change is not code (tests to add, a
   config to adopt), the snippet is that text: a test's name and its check, the config line. A Consider item that groups several lines names
   one `file:line` and says "and similar". The rule is a BN ID or the closest section of
   nim-best-practices; when no section covers it, write `Rule: none in the guide` and state the
