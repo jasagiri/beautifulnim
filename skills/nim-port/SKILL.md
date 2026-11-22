@@ -26,6 +26,8 @@ setting disagree.
   generate it from the source runtime, write the generator command in PORTING.md, and check the
   port against the runtime over every code point.
 - Bugs are behaviour until told otherwise: keep them, mark them in a test, and list them.
+- A state the original can reach that the port cannot represent (a node kept after its `Weak`
+  parent is gone) goes under deliberate differences, with how the original behaves in it.
 - Error messages are behaviour when callers or the task read them. When the task names only the
   error type, match the type and list the message differences in the notes.
 
@@ -85,14 +87,20 @@ Decide the public types and procs first (guide section 4), then fill them in unt
 ## 5. Verify
 
 - `nim check` clean with `lints/nim.cfg`, all ported tests green, `beautifulnim check
-  --min-level:warning` with nothing to report (or a reason for each).
+  --min-level:warning` with nothing to report (or a reason for each; `--format:json` shows each
+  file it parsed).
 - When the original is fast by design (a game loop, a parser, an inner loop), a port that
   compiles and passes its tests can still copy or allocate on every iteration. Run the same
   workload on both, compare the allocation counts and the time
   (`skills/nim-best-practices/details/escape-hatches.md`), and list each new copy or allocation on
   the hot path in PORTING.md with its reason. Count the original's allocations with its own
-  tools (a counting allocator, `heaptrack`, `valgrind`); when that is not possible, write the
-  count read from its code and mark it as read, not measured. The comparison is required when
+  tools (`heaptrack`, `valgrind`), or a copy of the original with a counting allocator added
+  (Rust `#[global_allocator]`, a `malloc` wrapper in C) and say which events it counts (when the
+  two sides count different events, such as `realloc`, compare only the ratio); when
+  that is not possible, write the count read from its code and mark it as read, not measured.
+  Time each side at least 5 runs and give the median with the minimum and maximum. Probes,
+  benchmarks and builds of the original are not deliverables: keep them in a directory of
+  their own and name them under "How it was verified". The comparison is required when
   the task names a cost (a frame, a hot path, a size); a step that cannot run is "not run" with
   the reason (nim-best-practices section 0).
 - Run both versions on the same inputs where possible and compare outputs byte for byte. List

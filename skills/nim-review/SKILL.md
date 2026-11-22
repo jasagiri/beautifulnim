@@ -134,8 +134,8 @@ checks something (nim check, beautifulnim, a build, a test, a probe, a sanitizer
   through a `ref` its parameters reach, with no `cast`; a copy or allocation per iteration on a
   hot path that you measured (Consider when only read).
 - A `raises` list does not track Defects, so `raises: []` on a proc that can hit one is legal:
-  the finding is the reachable Defect, not the annotation. A missing `##` or a missing `raises` list
-  on an exported routine is Should fix.
+  the finding is the reachable Defect, not the annotation. A missing `##` on an exported symbol or a
+  missing `raises` list on an exported routine is Should fix.
 - A doc comment that promises behaviour the code lacks is Should fix (section 10), Must fix when
   callers rely on it. When you cannot tell what the author meant, file it under Should fix with
   the question you need answered, instead of guessing a tier. This fallback is for code and doc

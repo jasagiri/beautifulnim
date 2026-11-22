@@ -34,9 +34,11 @@ off, read the rest by line range before you start.
 - **No project**: treat the file as a project of one: a copy of `lints/nim.cfg` next to it
   (section 2), tests in `tests/` beside it run with `nim c -r` (section 11), probes in a
   directory of their own, importing the module as `../<module>`.
-- **Details**: read the `details/` file a section names before writing that kind of code;
-  `details/ffi.md` before `importc`, a C callback, `cast` or `ptr`; `details/escape-hatches.md`
-  when a check or assertion stops you.
+- **Details**: open the file for what is in front of you, and name in your notes the ones you
+  read: `details/escape-hatches.md` when a check stops you (a forbidden copy, an effect error,
+  "the length of the seq changed while iterating") and for a cycle or a hot path;
+  `details/ffi.md` for `importc`, a C callback, `cast` or `ptr`; the others where a section names
+  them.
 
 ## 1. Mindset
 
@@ -471,12 +473,10 @@ func firstOf*(xs: openArray[int]; parity: Parity): Option[int] {.raises: [].} =
 ## References
 
 - `references/nep1.md` — naming, layout and coding conventions of the standard library.
-- `references/nim-manual.md` — effects (`raises`, `gcsafe`, `func`), `distinct`, `ref`/`ptr`,
-  methods, converters, exceptions.
-- `references/macros.md` — templates and macros: the manual's rules, and the Lisp lessons (On Lisp,
-  Google's Common Lisp guide) mapped to Nim.
+- `references/nim-manual.md` — the language rules this file cites.
+- `references/macros.md` — templates and macros: the manual's rules and the Lisp lessons (On
+  Lisp, Google's guide) mapped to Nim.
 - `references/destructors.md` — hooks, move semantics, `sink`/`lent`, `cursor`.
-- `references/status-style-guide.md` — production practices (errors, `ref object`, `result`,
-  `func`, imports, formatting).
+- `references/status-style-guide.md` — production practices.
 - Machine checks: `beautifulnim check` (see the repository README); compiler settings:
   `lints/nim.cfg`.

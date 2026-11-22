@@ -62,6 +62,11 @@ units.apply(plan(units, 10))
 doAssert not units[0].alive and units[1].hp == 40
 ```
 
+A loop that only changes fields of the elements (`for u in units.mitems: u.hp -= d`) keeps the
+length and needs no plan; only adding and removing wait for the end of the loop. Collect the
+additions in a local `seq` and `add` them after it; remove many elements in one pass with
+`keepItIf`, not `delete` in a loop, which shifts the rest on every call.
+
 `openArray[T]` in the reading routine cannot grow or shrink the collection, and a `func` cannot
 touch global state. A `func` can still write through a `ref` that a parameter reaches: with
 `h: Holder` and a field `box: ref Box`, `h.box.n += 1` compiles in a `func`. Keep `ref` out of
