@@ -119,9 +119,11 @@ checks something (nim check, beautifulnim, a build, a test, a probe, a sanitizer
   state or from a valid call order, whether it is a `Defect` or happens below Nim (a segfault on a
   `nil` passed to C, C undefined behaviour); memory or thread unsafety; swallowed errors; security;
   code that does not compile in a build the project ships (a forbidden copy that only `nim c` of a
-  caller shows counts); memory that is never freed (a cycle of an `{.acyclic.}` type, any cycle
-  under ARC, when the project ships ARC); an effect hidden by a `cast` pragma (a global write under `{.cast(noSideEffect).}`).
-  A cycle that ORC frees only at its next collection is Should fix when the project ships ORC. The fix for a `Defect` that external input can reach, or a value the
+  caller shows counts); an effect hidden by a `cast` pragma (a global write under `{.cast(noSideEffect).}`); memory that
+  is never freed:
+  - a cycle of an `{.acyclic.}` type: Must fix under ORC and ARC;
+  - any other cycle under ARC: Must fix when the project ships ARC;
+  - any other cycle under ORC: Should fix, because ORC frees it at its next collection. The fix for a `Defect` that external input can reach, or a value the
   caller cannot check before the call (a sum that overflows), is to check the value and raise a
   `CatchableError` (nim-best-practices section 5), not to document the `Defect`. A precondition
   the caller can check (an index below `len`) may stay a `Defect` named in the `##` comment, as

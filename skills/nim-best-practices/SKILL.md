@@ -32,7 +32,7 @@ off, read the rest by line range before you start.
   directory you may not write outside): write "not run" with the reason and what you did instead,
   and go on.
 - **No project**: treat the file as a project of one: a copy of `lints/nim.cfg` next to it
-  (section 2), tests in `tests/` beside it run with `nim c -r` (section 11), probes in `probe/`
+  (a working file; section 2), tests in `tests/` beside it run with `nim c -r` (section 11), probes in `probe/`
   beside it, importing the module as `../<module>`.
 - **Details**: open the file for what is in front of you, and name in your notes the ones you
   read: `details/escape-hatches.md` when a check stops you (a forbidden copy, an effect error,
@@ -469,7 +469,7 @@ func firstOf*(xs: openArray[int]; parity: Parity): Option[int] {.raises: [].} =
   unless the doc comment says otherwise, trees built with `genAst`/`quote`, misuse reported at the
   caller's node.
 
-## References (optional: open one when a rule needs its source)
+## References (optional; open one for a rule's source)
 
 - `references/nep1.md` — naming, layout and coding conventions of the standard library.
 - `references/nim-manual.md` — the language rules this file cites.

@@ -63,12 +63,32 @@ units.apply(plan(units, 10))
 doAssert not units[0].alive and units[1].hp == 40
 ```
 
-A loop that only changes fields of the elements (`for u in units.mitems: u.hp -= d`) keeps the
-length and needs no plan; only adding and removing wait for the end of the loop. Collect the
-additions in a local `seq` and `add` them after it; remove many elements in one pass with
-`keepIf(proc (u: Unit): bool = u.hp > 0)` (`std/sequtils`), not `delete` in a loop, which shifts the rest on every
-call. Not `keepItIf` on a hot path: its `it` is a copy of each element, an allocation per element
-that holds a `string` or `seq` (Nim 2.4.2: 5000 for 5000 units; `keepIf`: 0).
+A loop that only changes fields of the elements keeps the length and needs no plan; only adding
+and removing wait for the end of the loop:
+
+```nim
+import std/sequtils
+
+type Unit = object
+  name: string
+  hp: int
+
+proc step(units: var seq[Unit]; damage: int) =
+  var born: seq[Unit]
+  for u in units.mitems:              # fields only: the length stays
+    u.hp -= damage
+    if u.hp == 1: born.add Unit(name: u.name & "-child", hp: 3)
+  units.keepIf(proc (u: Unit): bool = u.hp > 0)
+  for b in born.mitems: units.add move(b)  # `units.add born` copies each one
+
+var units = @[Unit(name: "a", hp: 3), Unit(name: "b", hp: 1)]
+units.step(2)
+doAssert units == @[Unit(name: "a", hp: 1), Unit(name: "a-child", hp: 3)]
+```
+
+`keepIf` removes in one pass; `delete` in a loop shifts the rest on every call. Not `keepItIf`
+on a hot path: its `it` is a copy of each element, an allocation per element that holds a
+`string` or `seq` (Nim 2.4.2: 5000 for 5000 units; `keepIf`: 0).
 
 `openArray[T]` in the reading routine cannot grow or shrink the collection, and a `func` cannot
 touch global state. A `func` can still write through a `ref` that a parameter reaches: with
@@ -94,8 +114,8 @@ write an error.
 
 ## Measure what the tests do not
 
-For code on a hot path (every frame, every request, every element), check the cost as well as the
-result. Two checks a machine can repeat:
+For code on a hot path (every frame, every request, every element, as the task, a doc comment or
+a profile says), check the cost as well as the result. Two checks a machine can repeat:
 
 - `--expandArc:procName` prints the proc after the compiler inserted copies and destroys, if
   the program calls the proc (build a probe that calls it; a module alone prints nothing). A
@@ -124,7 +144,7 @@ main()
 ```
 
 When the task names a cost ("thousands of units", "every frame"), build a workload at the
-largest size it names in a probe outside the deliverable (to reach symbols the module does not
+largest size it names, and state the shape you chose (fan-out, mix), in a probe outside the deliverable (to reach symbols the module does not
 export, probe a copy of it with them exported; leave the module unchanged) and report the counts; a cost argued
 from reading the code alone is reported as read, not measured.
 

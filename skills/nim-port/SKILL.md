@@ -63,7 +63,8 @@ Decide the public types and procs first (guide section 4), then fill them in unt
 | Python `dict` (insertion order) | `OrderedTable` when order is observable, else `Table` |
 | Python `bytes`, JS `Uint8Array` | `seq[byte]` |
 | JS `number` | `int` or `float` chosen per use; check ranges |
-| Python `int` (unbounded) | `int`, with the bound checked before arithmetic can overflow (unchecked, overflow raises `OverflowDefect`). A result that does not fit raises the error the task names for bad input (`ValueError`), and PORTING.md lists it as a deliberate difference: saturate every accumulator (each number and the running total) just past the bound, or check before multiplying, and keep the original's order of errors (for each input, the first error the original raises is the one the port raises; a guard must not make a later error fire first) |
+| Python `int` (unbounded) | `int`, with the bound checked before arithmetic can overflow (unchecked, overflow raises `OverflowDefect`). A result that does not fit raises the error the task names for bad input (`ValueError`), unless
+  the original prints the same for every value past the bound (a count used as a limit): clamp it then, and PORTING.md lists it as a deliberate difference: saturate every accumulator (each number and the running total) just past the bound, or check before multiplying, and keep the original's order of errors (for each input, the first error the original raises is the one the port raises; a guard must not make a later error fire first) |
 | Python `str` (code points) | `string` (UTF-8 bytes); `std/unicode` runes where code points matter |
 | Python generator | `iterator`; a closure iterator only when it is stored or passed. Its checks run at the first step, as Python's do at the first `next()` |
 | Go `error` return | raise, or `Opt`/result value; never ignore it |
@@ -103,8 +104,8 @@ Decide the public types and procs first (guide section 4), then fill them in unt
   benchmarks and builds of the original are not deliverables: keep them in `probe/` and name them under "How it was verified". The comparison is required when
   the task names a cost (a frame, a hot path, a size); a step that cannot run is "not run" with
   the reason (nim-best-practices section 0).
-- Run both versions on the same inputs where possible and compare outputs byte for byte (a
-  hash of each side's whole output when it is large). Match stdout and the exit status; stderr
+- Run both versions on the same inputs where possible and compare outputs byte for byte (write each
+  side's stdout to a file and `cmp` them, or compare hashes when they are large). Match stdout and the exit status; stderr
   text only when the task names it. An input both sides take with different results is a bug in
   the port: fix it and pin it in a test, unless it is a listed deliberate difference. List
   the inputs that only one side can take (invalid UTF-8 for a Python `str`, numbers past
