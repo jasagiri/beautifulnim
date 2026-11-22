@@ -40,9 +40,10 @@ setting disagree, and says which `details/` file to open for what is in front of
   section 0); a task that shows `import <module>` describes its callers, not the tests. If the original has no tests, write tests from the behaviour list (its
   docstrings, its docs, or with neither the output the task names, then its code; say which) before
   porting; the notes map each clause to its test name. Test a behaviour only a private routine
-  shows through the public routine or the program that calls it; do not export it for the test.
-- Run them against a stub that compiles: all fail, except tests the stub meets by accident (an
-  empty result for empty input); list those. That is the baseline.
+  shows through the public routine, or give a program a public entry that takes its arguments and
+  returns its output and exit code (`run(args)`); do not export the routine for the test.
+- Run them against a stub that compiles under the same `nim.cfg` (no unused import): all fail, except tests the stub meets by accident (an
+  empty result for empty input); list those. That is the baseline; save its output to a file.
 
 ## 3. Design the API, then implement
 
@@ -84,7 +85,7 @@ Decide the public types and procs first (guide section 4), then fill them in unt
   well-known packages; say which and why. Where the port must match the original exactly, run a
   standard routine against the oracle on the input classes it will see before relying on it
   (`formatFloat` has no `%g` mode; `parseFloat` misreads literals over 494 digits in Nim 2.4).
-  When it differs, use the nearest primitive that matches, keep the comparison as a test, and
+  When it differs, use the nearest primitive that matches, or a small routine of your own when none does, keep the comparison as a test, and
   list the replacement under deliberate differences.
 
 ## 5. Verify
@@ -102,7 +103,7 @@ Decide the public types and procs first (guide section 4), then fill them in unt
   two sides count different events, such as `realloc`, compare only the ratio); when
   that is not possible, write the count read from its code and mark it as read, not measured.
   Time one pass over the workload (setup excluded), each side in its release build (`-d:release`,
-  `rustc -O`, `-O2`; not `-d:danger`), at least 5 passes (in one process or several; say which), and give the median with the minimum and maximum. Probes,
+  `rustc -O`, `-O2`; not `-d:danger`), at least 5 passes (in one process or several; say which; no warm-up pass unless you say so), and give the median with the minimum and maximum. Probes,
   benchmarks and builds of the original are not deliverables: keep them in `probe/` and name them under "How it was verified". The comparison is required when
   the task names a cost (a frame, a hot path, a size); a step that cannot run is "not run" with
   the reason (nim-best-practices section 0).

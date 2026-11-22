@@ -150,7 +150,8 @@ checks something (nim check, beautifulnim, a build, a test, a probe, a sanitizer
   the question you need answered, instead of guessing a tier. This fallback is for code and doc
   that disagree; bad input skipped while the doc comment says nothing is swallowed (Must fix).
 - **Consider**: idiom and style; at most a handful, grouped by kind rather than repeated per line.
-- Every finding has a place, a rule and a fix. The fix is a code snippet; when the change is to a
+- Every finding has a place, a rule and a fix; check a code fix by compiling it in a copy of the
+  module in `probe/`, and say so. The fix is a code snippet; when the change is to a
   doc comment, the snippet is the new comment; when only the author can decide, write the question
   and a snippet for each answer you would accept; a fix that changes an exported signature shows
   it before and after and names the change at the call sites (outside the reviewed files, what
@@ -168,7 +169,8 @@ checks something (nim check, beautifulnim, a build, a test, a probe, a sanitizer
   per-frame copies in `skills/nim-best-practices/details/escape-hatches.md`.
 - "What is already good" is required; it tells the author what not to change.
 - Write the review in the language of the pull request or the project's documentation; with
-  neither, in the language of the request.
+  neither, in the language of the request. This rule is for the review file, whatever language the
+  chat uses.
 
 ## 5. Offer the configuration
 
