@@ -99,11 +99,14 @@ Decide the public types and procs first (guide section 4), then fill them in unt
   two sides count different events, such as `realloc`, compare only the ratio); when
   that is not possible, write the count read from its code and mark it as read, not measured.
   Time one pass over the workload (setup excluded), each side in its release build (`-d:release`,
-  `rustc -O`, `-O2`; not `-d:danger`), at least 5 runs, and give the median with the minimum and maximum. Probes,
+  `rustc -O`, `-O2`; not `-d:danger`), at least 5 passes (in one process or several; say which), and give the median with the minimum and maximum. Probes,
   benchmarks and builds of the original are not deliverables: keep them in `probe/` and name them under "How it was verified". The comparison is required when
   the task names a cost (a frame, a hot path, a size); a step that cannot run is "not run" with
   the reason (nim-best-practices section 0).
-- Run both versions on the same inputs where possible and compare outputs byte for byte. List
+- Run both versions on the same inputs where possible and compare outputs byte for byte (a
+  hash of each side's whole output when it is large). Match stdout and the exit status; stderr
+  text only when the task names it. An input both sides take with different results is a bug in
+  the port: fix it and pin it in a test, unless it is a listed deliberate difference. List
   the inputs that only one side can take (invalid UTF-8 for a Python `str`, numbers past
   `int64`), and name the test that covers each. For an input only the port can take, choose
   what it does (the error and message the task names for bad input, or a stated result), pin it
@@ -123,5 +126,6 @@ these sections there and write no second file.
 - Deliberate differences, each with the reason (for example "raises ConfigError instead of
   returning -1").
 - Preserved quirks and bugs, each pinned by a test.
+- Working files (the copied `nim.cfg`, `probe/`) are not deliverables; name them.
 - How it was verified: the commands and their exit codes (the command's own, not a filter's:
   `set -o pipefail`, or run it alone; a code you did not capture is "not captured").

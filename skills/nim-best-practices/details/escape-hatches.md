@@ -12,7 +12,7 @@ name each check that stopped you and the shape you changed.
 
 | The check | The shortcut that compiles | What it costs | The shape to use instead |
 |---|---|---|---|
-| `=copy {.error.}`, or a value passed to `sink` and used again | copy it: a deep `=copy`, `deepCopy`, a second variable | an allocation per call; two values that each think they own the data | move at the last use (`move x`), borrow with a plain parameter, return a view with `lent T`, or keep one owner and hand out indices |
+| `=copy {.error.}`, or a value passed to `sink` and used again | copy it: a deep `=copy`, `deepCopy`, a second variable | an allocation per call; two values that each think they own the data | read it before the `sink` call, move at the last use (`move x`), borrow with a plain parameter, return a view with `lent T`, or keep one owner and hand out indices |
 | mutate one element while reading another, or a `var` parameter that aliases | wrap the data in `ref`, or a module-level `var` | reference counting on every access, unclear ownership, global state, cycles for ORC | one owner holds the `seq`; others hold an index into it; read in one loop, collect the changes, apply them after the loop |
 | `func` "can have side effects", `gcsafe`, `raises` | `{.cast(noSideEffect).}`, `{.cast(gcsafe).}`, `{.cast(raises: []).}`, an `except` that discards (BN-01) | the effect still happens; only the signature stops saying so | pass the state in and return the change; move data between threads (`details/concurrency.md`); handle or declare the exception |
 | a type mismatch | `cast[T]`, `addr`, `ptr`, `unsafeAddr` | no check of lifetime, layout or alignment | a conversion `T(x)`, a `distinct` type with borrowed procs, or a different type (`details/ffi.md` at a C boundary) |

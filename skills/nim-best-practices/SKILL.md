@@ -448,8 +448,7 @@ func firstOf*(xs: openArray[int]; parity: Parity): Option[int] {.raises: [].} =
 3. Avoid copies: `sink`/`lent`, `openArray` parameters, `move` where the compiler cannot see it.
 4. Avoid allocations: value objects over `ref`, reuse buffers the caller passes in.
 5. After measuring, a program with no cycles may switch to `--mm:arc` (orc stays the default),
-   and link-time optimisation (`--passC:-flto
-   --passL:-flto`) rather than `{.inline.}` everywhere (Status).
+   and LTO (`--passC:-flto --passL:-flto`) rather than `{.inline.}` everywhere (Status).
 6. Never ship `-d:danger` as the default build; it removes the checks that turn bugs into errors.
 
 ## 13. Final checklist
@@ -470,12 +469,12 @@ func firstOf*(xs: openArray[int]; parity: Parity): Option[int] {.raises: [].} =
   unless the doc comment says otherwise, trees built with `genAst`/`quote`, misuse reported at the
   caller's node.
 
-## References
+## References (optional: open one when a rule needs its source)
 
 - `references/nep1.md` — naming, layout and coding conventions of the standard library.
 - `references/nim-manual.md` — the language rules this file cites.
-- `references/macros.md` — templates and macros: the manual's rules and the Lisp lessons (On
-  Lisp, Google's guide) mapped to Nim.
+- `references/macros.md` — templates and macros: the manual's rules and the Lisp lessons
+  mapped to Nim.
 - `references/destructors.md` — hooks, move semantics, `sink`/`lent`, `cursor`.
 - `references/status-style-guide.md` — production practices.
 - Machine checks: `beautifulnim check` (see the repository README); compiler settings:

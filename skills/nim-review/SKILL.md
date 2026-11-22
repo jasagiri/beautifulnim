@@ -97,7 +97,7 @@ findings the tools caught and which came from reading.
 
 ```text
 ## Summary
-<scope, library or application, Nim version (one line, from `nim -v`), and each command that
+<scope, library or application, Nim version (one line, from `nim -v`) and memory manager, and each command that
 checks something (nim check, beautifulnim, a build, a test, a probe, a sanitizer run) with its exit code>
 
 ## Must fix
@@ -114,7 +114,8 @@ checks something (nim check, beautifulnim, a build, a test, a probe, a sanitizer
 - <specific things worth keeping, with file:line>
 ```
 
-- **Must fix**: wrong results; a crash reachable from external input (valid or not), from valid
+- **Must fix**: wrong results; a crash reachable from external input (valid or not; for a library,
+  any value a caller supplies), from valid
   state or from a valid call order, whether it is a `Defect` or happens below Nim (a segfault on a
   `nil` passed to C, C undefined behaviour); memory or thread unsafety; swallowed errors; security;
   code that does not compile in a build the project ships (a forbidden copy that only `nim c` of a
@@ -146,7 +147,8 @@ checks something (nim check, beautifulnim, a build, a test, a probe, a sanitizer
 - Every finding has a place, a rule and a fix. The fix is a code snippet; when the change is to a
   doc comment, the snippet is the new comment; when only the author can decide, write the question
   and a snippet for each answer you would accept; a fix that changes an exported signature shows
-  it before and after and names the change at the call sites; when the change is not code (tests to add, a
+  it before and after and names the change at the call sites (outside the reviewed files, what
+  each caller must change); when the change is not code (tests to add, a
   config to adopt), the snippet is that text: a test's name and its check, the config line. A Consider item that groups several lines names
   one `file:line` and says "and similar". The rule is a BN ID or the closest section of
   nim-best-practices; when no section covers it, write `Rule: none in the guide` and state the
