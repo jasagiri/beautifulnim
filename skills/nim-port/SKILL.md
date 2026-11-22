@@ -38,7 +38,7 @@ setting disagree.
   case; the test mapping lists which is which), with `std/unittest`, in the
   project's `tests/`; with no project, in `tests/` beside the module, importing `../<module>` (nim-best-practices
   section 0); a task that shows `import <module>` describes its callers, not the tests. If the original has no tests, write tests from the behaviour list (its
-  docstrings, its docs, or with neither its code and the output the task names; say which) before
+  docstrings, its docs, or with neither the output the task names, then its code; say which) before
   porting; the notes map each clause to its test name. Test a behaviour only a private routine
   shows through the public routine or the program that calls it; do not export it for the test.
 - Run them against a stub that compiles: all fail, except tests the stub meets by accident (an
@@ -66,7 +66,7 @@ Decide the public types and procs first (guide section 4), then fill them in unt
 | Python `bytes`, JS `Uint8Array` | `seq[byte]` |
 | JS `number` | `int` or `float` chosen per use; check ranges |
 | Python `int` (unbounded) | `int`, with the bound checked before arithmetic can overflow (unchecked, overflow raises `OverflowDefect`). A result that does not fit raises the error the task names for bad input (`ValueError`), unless
-  the original prints the same for every value past the bound (a count used as a limit): clamp it then, and PORTING.md lists it as a deliberate difference: saturate every accumulator (each number and the running total) just past the bound, or check before multiplying, and keep the original's order of errors (for each input, the first error the original raises is the one the port raises; a guard must not make a later error fire first) |
+  the original prints the same for every value past the bound (a count used as a limit): clamp it then (check by running the original at two values past the bound), and PORTING.md lists it as a deliberate difference: saturate every accumulator (each number and the running total) just past the bound, or check before multiplying, and keep the original's order of errors (for each input, the first error the original raises is the one the port raises; a guard must not make a later error fire first) |
 | Python `str` (code points) | `string` (UTF-8 bytes); `std/unicode` runes where code points matter |
 | Python generator | `iterator`; a closure iterator only when it is stored or passed. Its checks run at the first step, as Python's do at the first `next()` |
 | Go `error` return | raise, or `Opt`/result value; never ignore it |
@@ -110,7 +110,8 @@ Decide the public types and procs first (guide section 4), then fill them in unt
   side's stdout to a file and `cmp` them, or compare hashes when they are large). Match stdout and the exit status; stderr
   text only when the task names it. A comparison script exits non-zero on a difference not listed
   as deliberate. Code that reads untrusted input also gets the checks of
-  `skills/nim-best-practices/details/testing.md`. An input both sides take with different results is a bug in
+  `skills/nim-best-practices/details/testing.md`, on the routine that parses, in process (the binary
+  only for the exit status). An input both sides take with different results is a bug in
   the port: fix it and pin it in a test, unless it is a listed deliberate difference. List
   the inputs that only one side can take (invalid UTF-8 for a Python `str`, numbers past
   `int64`), and name the test that covers each. For an input only the port can take, choose

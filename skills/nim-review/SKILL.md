@@ -23,7 +23,8 @@ the setting disagree.
   a service is application code, unless other packages import it. With no project, the file is a
   project of one (nim-best-practices section 0): library rules when the request says other code
   imports it or that it goes into a library, application rules otherwise, tiered by the default build (section 4).
-- Nim version and memory manager (`nim -v`, the `requires "nim >= …"` line, `--mm`), and the
+- Nim version and memory manager (`nim -v`; the boot switches it prints are how the compiler was
+  built, not the project's build; the `requires "nim >= …"` line, `--mm`), and the
   project's own conventions (constructor style `initFoo` vs `Foo.init`, `results` vs exceptions,
   `asyncdispatch` vs `chronos`, formatter). Judge by those, and say where they differ from the guide.
 
@@ -35,7 +36,8 @@ the setting disagree.
    run covers both). `--skipProjCfg` leaves out the `nim.cfg` next to the files and
    `--skipParentCfg` those of the directories above, for a run without them. When the code defines hooks, also `nim c` a driver that
    calls every exported routine: `nim check` does not report a forbidden copy, and `nim c` checks
-   only the routines a program calls, so `nim c` of the module alone checks none (nim-best-practices section 2). Every error is a finding. For a loose file, or a file whose name is not a
+   only the routines a program calls, so `nim c` of the module alone checks none (nim-best-practices section 2). Every error is a finding. When the code has a `func`, also run `nim check
+   --experimental:strictFuncs`: only then is a write through a `ref` an error. For a loose file, or a file whose name is not a
    Nim identifier, follow nim-best-practices section 2 (copy, `nim.cfg` next to it, `nim doc` when
    it has `runnableExamples`) and say in the summary which copy you checked.
 2. `beautifulnim check --min-level:warning --typed <files>` (the CLI in this repository). `--typed`
@@ -67,7 +69,7 @@ findings the tools caught and which came from reading.
 1. **Correctness and memory safety** — unchecked `Option.get`, object-variant fields read under the
    wrong `kind`, a collection changed while it is iterated (`del` inside `for … in t`;
    the fix collects the keys first, then deletes), integer overflow in sums of amounts from
-   outside, meaning any value a caller of a public proc or an external input supplies (a Defect,
+   outside (across calls too: a running total of what callers passed), meaning any value a caller of a public proc or an external input supplies (a Defect,
    so Must fix), integer and
    range conversions from untrusted input (the fix: parse, check the bounds, then convert;
    nim-best-practices section 5), `cast`/`ptr`/`addr` without a soundness argument, a `cstring` outliving its `string` (BN-12), missing `=destroy` or double ownership (a type with
@@ -118,7 +120,7 @@ checks something (nim check, beautifulnim, a build, a test, a probe, a sanitizer
 - **Must fix**: wrong results; a crash reachable from external input (valid or not; for a library,
   any value a caller supplies), from valid
   state or from a valid call order, whether it is a `Defect` or happens below Nim (a segfault on a
-  `nil` passed to C, C undefined behaviour); memory or thread unsafety; swallowed errors; security;
+  `nil` passed to C, C undefined behaviour); memory or thread unsafety (BN-11, BN-12); swallowed errors; security;
   code that does not compile in a build the project ships (a forbidden copy that only `nim c` of a
   caller shows counts); an effect hidden by a `cast` pragma (a global write under `{.cast(noSideEffect).}`); memory that
   is never freed:

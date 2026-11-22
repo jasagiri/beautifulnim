@@ -5,6 +5,9 @@ warning, or rejected with an error that does not name the cause. When a check st
 forbidden copy, an effect error, the length assertion of a `for` loop whose `seq` changed),
 `details/escape-hatches.md` says what to change instead of getting past it.
 
+- An argument that changes what an earlier argument of the same call reads is seen too late: in
+  `at(t, t.add())` the first `t` was evaluated before `add` ran, so `at` reads the old value
+  (Nim 2.4.2: `IndexDefect` on an empty `seq`). Bind the result first: `let i = t.add(); at(t, i)`.
 - A space before `(` turns a call into a command call. `f (1, 2)` passes the tuple `(1, 2)` as
   one argument; `f(1, 2)` passes two.
 - A command call takes the whole expression after it: `doAssert f 1 == 1` asserts

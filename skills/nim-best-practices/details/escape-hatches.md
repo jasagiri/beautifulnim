@@ -104,11 +104,12 @@ write an error.
   pointer back up qualifies; a parent pointer, a back edge or a child shared by two parents does
   not.
 - A closure stored in an object that captures that object is a cycle. ARC never frees it and
-  warns `CycleCreated`; ORC frees it only when the cycle collector runs, so a resource it owns is
+  does not warn (`CycleCreated` names only a direct `x.field = x`; Nim 2.4.2); ORC frees it only when the cycle collector runs, so a resource it owns is
   released later than the end of the scope. Pass the object to the callback as a parameter
   (`proc (b: Button)`) instead of capturing it, or keep the callbacks in one owner and refer to
   the objects by index.
-- A parent pointer: an index into the owner's `seq` by default (a stale one reads the wrong
+- A parent pointer: an index into the owner's `seq` by default (when the code has no one owner of
+  all nodes, give both forms and leave the choice to the author) (a stale one reads the wrong
   element or fails a bounds check, but never reads freed memory); `{.cursor.}` only when every parent outlives its
   children, because a cursor to a freed parent dangles with no check (`details/ownership.md`).
 

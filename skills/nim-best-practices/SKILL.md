@@ -395,7 +395,7 @@ before writing threads, locks, channels or async code.
   Doc comments are RST: a bare `**` (as in `2**31`) is a markup error; write `2^31` or put
   code in double backquotes.
   Every public template and macro has one, and so does every exported proc or iterator that
-  raises, takes a callback, or behaves specially at an edge (empty input, a bound). Plain getters
+  raises, takes a callback, or behaves specially at an edge (empty input, a bound, a Defect on misuse). Plain getters
   and one-line wrappers need none.
   A block sees the module's exported symbols but **not the module's imports**: import what the
   example uses (`std/options`, `std/tables`) inside the block, operators included (`in` on
