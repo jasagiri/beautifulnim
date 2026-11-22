@@ -12,7 +12,7 @@ description: >-
 The goal is Nim that a Nim programmer would have written, with the same observable behaviour as
 the original — not the original's structure in Nim syntax. Read
 `skills/nim-best-practices/SKILL.md` first; its section 0 decides when the task, the guides or the
-setting disagree.
+setting disagree, and says which `details/` file to open for what is in front of you.
 
 ## 1. Understand the original
 
@@ -109,7 +109,7 @@ Decide the public types and procs first (guide section 4), then fill them in unt
 - Run both versions on the same inputs where possible and compare outputs byte for byte (write each
   side's stdout to a file and `cmp` them, or compare hashes when they are large). Match stdout and the exit status; stderr
   text only when the task names it. A comparison script exits non-zero on a difference not listed
-  as deliberate. Code that reads untrusted input also gets the checks of
+  as deliberate. Code that reads untrusted input (a file, an argument or a network message a user supplies) also gets the checks of
   `skills/nim-best-practices/details/testing.md`, on the routine that parses, in process (the binary
   only for the exit status). An input both sides take with different results is a bug in
   the port: fix it and pin it in a test, unless it is a listed deliberate difference. List

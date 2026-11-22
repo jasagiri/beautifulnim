@@ -108,8 +108,9 @@ write an error.
   released later than the end of the scope. Pass the object to the callback as a parameter
   (`proc (b: Button)`) instead of capturing it, or keep the callbacks in one owner and refer to
   the objects by index.
-- A parent pointer: an index into the owner's `seq` by default (when the code has no one owner of
-  all nodes, give both forms and leave the choice to the author) (a stale one reads the wrong
+- A parent pointer: an index into the owner's `seq`. That needs one owner of all nodes; when the
+  code has none, adding one is a design change, so give it and the `{.cursor.}` form below and
+  leave the choice to the author (a stale one reads the wrong
   element or fails a bounds check, but never reads freed memory); `{.cursor.}` only when every parent outlives its
   children, because a cursor to a freed parent dangles with no check (`details/ownership.md`).
 

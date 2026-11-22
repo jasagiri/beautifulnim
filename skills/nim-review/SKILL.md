@@ -43,7 +43,8 @@ the setting disagree.
 2. `beautifulnim check --min-level:warning --typed <files>` (the CLI in this repository). `--typed`
    checks each file as `nim check` does, so a `bool` behind an alias (`type Flag = bool`) counts
    for BN-02; when the files do not compile yet, drop `--typed` and report the compile errors from
-   step 1. Report the `--typed` run; a run without it misses those aliases. Each BN finding is a candidate;
+   step 1. Report the `--typed` run; a run without it misses those aliases. It checks the BN rules
+   only (`beautifulnim rules` lists them): missing `##`, `raises` lists and the rest come from reading. Each BN finding is a candidate;
    confirm it in context before reporting it.
 3. The project's tests. A failing test is the first finding. If there are none, say so in the
    summary and name the behaviour a test should pin down.

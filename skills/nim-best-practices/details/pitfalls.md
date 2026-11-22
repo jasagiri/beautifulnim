@@ -8,6 +8,11 @@ forbidden copy, an effect error, the length assertion of a `for` loop whose `seq
 - An argument that changes what an earlier argument of the same call reads is seen too late: in
   `at(t, t.add())` the first `t` was evaluated before `add` ran, so `at` reads the old value
   (Nim 2.4.2: `IndexDefect` on an empty `seq`). Bind the result first: `let i = t.add(); at(t, i)`.
+- A routine called with method syntax from a module you did not import is reported as
+  "undeclared field" (`el.inNanoseconds` without `import std/times`): check the imports first.
+- An import used only inside `when isMainModule` is unused when a test imports the module, and
+  with `lints/nim.cfg` that `UnusedImport` stops the test build while `nim check` of the module
+  alone passes. Import it inside that block.
 - A space before `(` turns a call into a command call. `f (1, 2)` passes the tuple `(1, 2)` as
   one argument; `f(1, 2)` passes two.
 - A command call takes the whole expression after it: `doAssert f 1 == 1` asserts
