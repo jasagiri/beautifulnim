@@ -121,9 +121,13 @@ a profile says), check the cost as well as the result. Two checks a machine can 
   the program calls the proc (build a probe that calls it; a module alone prints nothing). A
   `=copy` inside a loop is an allocation per iteration when the value holds a `seq`, `string` or
   `ref`.
-- `-d:nimAllocStats` counts allocations; `getAllocStats()` reads the count. The fields are
+- `-d:nimAllocStats` counts allocations; `getAllocStats()` reads the count. Keep output (`echo`)
+  out of the counted window, and when `--expandArc` leaves it unclear whether a line copies, the
+  count decides. The fields are
   private: `$(getAllocStats() - before)` prints both counts (`(allocCount: 100, deallocCount:
-  100)`), and a check compares the difference with `default(AllocStats)`. Without the define,
+  100)`), and a check compares the difference with `default(AllocStats)`. A leak shows as `allocCount` above
+`deallocCount` in that difference (after `GC_fullCollect()` under ORC); compare the two numbers
+from the `$` form. Without the define,
   `getAllocStats()` always returns zero and every such check passes, so first check that a known
   allocation is counted:
 

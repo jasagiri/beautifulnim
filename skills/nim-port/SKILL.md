@@ -38,7 +38,9 @@ setting disagree.
   case; the test mapping lists which is which), with `std/unittest`, in the
   project's `tests/`; with no project, in `tests/` beside the module, importing `../<module>` (nim-best-practices
   section 0); a task that shows `import <module>` describes its callers, not the tests. If the original has no tests, write tests from the behaviour list (its
-  docstrings, its docs) before porting; the notes map each clause to its test name.
+  docstrings, its docs, or with neither its code and the output the task names; say which) before
+  porting; the notes map each clause to its test name. Test a behaviour only a private routine
+  shows through the public routine or the program that calls it; do not export it for the test.
 - Run them against a stub that compiles: all fail, except tests the stub meets by accident (an
   empty result for empty input); list those. That is the baseline.
 
@@ -106,7 +108,9 @@ Decide the public types and procs first (guide section 4), then fill them in unt
   the reason (nim-best-practices section 0).
 - Run both versions on the same inputs where possible and compare outputs byte for byte (write each
   side's stdout to a file and `cmp` them, or compare hashes when they are large). Match stdout and the exit status; stderr
-  text only when the task names it. An input both sides take with different results is a bug in
+  text only when the task names it. A comparison script exits non-zero on a difference not listed
+  as deliberate. Code that reads untrusted input also gets the checks of
+  `skills/nim-best-practices/details/testing.md`. An input both sides take with different results is a bug in
   the port: fix it and pin it in a test, unless it is a listed deliberate difference. List
   the inputs that only one side can take (invalid UTF-8 for a Python `str`, numbers past
   `int64`), and name the test that covers each. For an input only the port can take, choose

@@ -11,9 +11,8 @@ description: >-
 
 # Nim best practices
 
-Distilled from four sources (digests in `references/`): NEP1, the Nim manual, the destructors and
-move semantics document (all at Nim 2.4.2), and the Status Nim style guide. Where they disagree,
-this file says which to follow and why. Rules a machine can check carry an ID (BN-01…) and are
+Distilled from NEP1, the Nim manual, the destructors document (all at Nim 2.4.2) and the Status
+Nim style guide (digests in `references/`); where they disagree, this file says which to follow. Rules a machine can check carry an ID (BN-01…) and are
 reported by `beautifulnim check` (the CLI in this repository); rules the compiler checks are
 switched on in `lints/nim.cfg`. This file is about 28 000 characters: if your reader cuts it
 off, read the rest by line range before you start.
@@ -110,7 +109,7 @@ off, read the rest by line range before you start.
   code; not to escape a copy or `var` error. When both forms exist, the value type gets the plain
   name and the other `FooRef` (Status always adds `Ref`; follow the project).
 - **Resources and hooks.** A type that owns memory or an operating-system resource decides what
-  a copy does (`=copy {.error.}` or a deep `=copy`); `=destroy` is for a raw pointer or OS
+  a copy does (`=copy {.error.}` or a deep `=copy`; BN-11); `=destroy` is for a raw pointer or OS
   handle, not a `seq` field. Read `details/ownership.md` before writing either.
 - Iterate with `items`/`pairs` to read and `mitems`/`mpairs` to change elements in place; neither
   copies the elements. Use `move(x)` or `ensureMove(x)` only where the compiler cannot see that a
@@ -374,7 +373,7 @@ before writing threads, locks, channels or async code.
   it: `add`, `setLen`, `insert`, `delete`, or a move of the whole value. Hold the index instead,
   or finish with the pointer before you change the length.
 - Turn a check off only around measured hot code, locally, with the measurement in a comment.
-- Run the checks `details/ffi.md` lists.
+- Run the checks `details/ffi.md` lists (BN-12 among them).
 
 ## 9. Packages and modules
 

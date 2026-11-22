@@ -9,7 +9,8 @@ Part of nim-best-practices section 8. Read it before writing `importc`, a C call
   or finish with the pointer before you change the length.
 - FFI: `importc` with a `header`, C types (`cint`, `csize_t`, `cstring`), and a Nim wrapper that
   converts at the boundary. A `cstring` does not own its bytes: keep the Nim `string` alive while
-  C uses it (`CStringConv` is an error in `lints/nim.cfg`). Free memory with the allocator that
+  C uses it (`CStringConv` is an error in `lints/nim.cfg`; a routine that returns a `cstring` of a
+  temporary, local or `sink` string is BN-12, reported by `beautifulnim check --typed`). Free memory with the allocator that
   allocated it. Wrap an owning C pointer in an object with `=destroy`. Turn `NULL` into `Option` or
   a raised error. Callbacks passed to C are `{.cdecl, raises: [].}`: an exception must not unwind
   through C frames.

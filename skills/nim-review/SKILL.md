@@ -70,7 +70,8 @@ findings the tools caught and which came from reading.
    outside, meaning any value a caller of a public proc or an external input supplies (a Defect,
    so Must fix), integer and
    range conversions from untrusted input (the fix: parse, check the bounds, then convert;
-   nim-best-practices section 5), `cast`/`ptr`/`addr` without a soundness argument, a `cstring` outliving its `string`, missing `=destroy` or double ownership,
+   nim-best-practices section 5), `cast`/`ptr`/`addr` without a soundness argument, a `cstring` outliving its `string` (BN-12), missing `=destroy` or double ownership (a type with
+   `=destroy` and no `=copy`: BN-11),
    `{.cast(gcsafe).}` hiding a data race, shared state without a lock. A change that only gets a
    check to pass: a copy of a value that is used again (a `=copy` inside a loop under
    `--expandArc`), a `ref` with one owner, a module-level `var`, `{.cast(noSideEffect).}` or

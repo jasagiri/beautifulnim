@@ -13,7 +13,7 @@ Part of nim-best-practices section 3. Read it before writing `=destroy`, `=copy`
   a later one fails with "cannot bind another '=destroy'" (also for a probe's `=copy {.error.}`).
 - **A type with `=destroy` must say what a copy does.** Without `=copy` the compiler copies the
   fields bit by bit, so two values free the same memory: a double free the first time a copy is
-  made. Passing the value to a plain parameter only borrows it; a copy happens when a value that
+  made (BN-11, reported by `beautifulnim check --typed`). Passing the value to a plain parameter only borrows it; a copy happens when a value that
   is still used afterwards is stored (added to a `seq`, assigned to a variable or a field).
   Choose one:
   - `=copy {.error.}` when the type owns something unique (a file, a socket, a lock) or a copy
