@@ -43,7 +43,7 @@ setting disagree, and says which `details/` file to open for what is in front of
   shows through the public routine, or give a program a public entry that takes its arguments and
   returns its output and exit code (`run(args)`); do not export the routine for the test.
 - Run them against a stub that compiles under the same `nim.cfg` (no unused import): all fail, except tests the stub meets by accident (an
-  empty result for empty input); list those. That is the baseline; save its output to a file.
+  empty result for empty input); list those. That is the baseline; save its output to a file in `probe/`.
 
 ## 3. Design the API, then implement
 
@@ -84,7 +84,9 @@ Decide the public types and procs first (guide section 4), then fill them in unt
 - Use the standard library first (`std/json`, `std/tables`, `std/strutils`, `std/os`), then
   well-known packages; say which and why. Where the port must match the original exactly, run a
   standard routine against the oracle on the input classes it will see before relying on it
-  (`formatFloat` has no `%g` mode; `parseFloat` misreads literals over 494 digits in Nim 2.4).
+  (`formatFloat` has no `%g` mode; `parseFloat` misreads literals over 494 digits in Nim 2.4;
+  `std/unicode.validateUtf8` accepts surrogates and code points above U+10FFFF, which Python's
+  decoder rejects).
   When it differs, use the nearest primitive that matches, or a small routine of your own when none does, keep the comparison as a test, and
   list the replacement under deliberate differences.
 
@@ -97,7 +99,7 @@ Decide the public types and procs first (guide section 4), then fill them in unt
   compiles and passes its tests can still copy or allocate on every iteration. Run the same
   workload on both, compare the allocation counts and the time
   (`skills/nim-best-practices/details/escape-hatches.md`), and list each new copy or allocation on
-  the hot path in PORTING.md with its reason. Count the original's allocations with its own
+  the hot path in PORTING.md with its reason. Count the port's allocations with `-d:nimAllocStats` and the original's with its own
   tools (`heaptrack`, `valgrind`), or a copy of the original with a counting allocator added
   (Rust `#[global_allocator]`, a `malloc` wrapper in C) and say which events it counts (when the
   two sides count different events, such as `realloc`, compare only the ratio); when
