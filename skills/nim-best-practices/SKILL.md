@@ -403,8 +403,8 @@ before writing threads, locks, channels or async code.
   example it prints the whole command; the error is in the lines before it.
 - Fields and enum values take their `##` on the same line, after the declaration.
 - Document what the signature cannot say: preconditions, complexity, ownership, side effects.
-  `raises` and `gcsafe` are in the signature already.
-- `#` comments explain why, not what. `TODO:` with an issue link. No change logs in comments.
+- `#` comments say why not (the road not taken); why a change was made goes in the commit
+  message. `TODO:` with an issue link.
 
 ```nim
 import std/options
@@ -437,8 +437,8 @@ func firstOf*(xs: openArray[int]; parity: Parity): Option[int] {.raises: [].} =
   still gets them, on every public symbol that section 10 says needs one. Show a runtime error with
   `doAssertRaises(IndexDefect): discard b[9]`; `doAssert not compiles(...)` is only for what
   must not compile.
-- Read `details/testing.md` when the code parses untrusted input, owns memory or calls C, or
-  must fail to compile in some use.
+- Read `details/testing.md` when the code parses untrusted input, owns memory or calls C,
+  must fail to compile in some use, or has a written spec.
 
 ## 12. Performance, in order
 

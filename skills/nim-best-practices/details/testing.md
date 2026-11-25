@@ -1,7 +1,7 @@
-# Fuzzing, memory tests and compile failures
+# Fuzzing, memory tests, compile failures and specifications
 
 Part of nim-best-practices section 11. Read it when the code parses untrusted input, owns memory
-or calls C, or must fail to compile in some use.
+or calls C, must fail to compile in some use, or has a written specification.
 
 - Fuzz parsers of untrusted input (anything the program does not control: user input, the
   network, files people edit such as configs): a seeded loop over random byte strings (say 100 000), where
@@ -21,3 +21,7 @@ or calls C, or must fail to compile in some use.
 - Test what must not compile. `doAssert not compiles(expr)` works for type errors and a macro's
   `error`, but not for a forbidden copy: `=copy {.error.}` is reported after `compiles` has
   answered (and after `nim check` has finished). Put the copy in its own file and expect `nim c` to fail.
+- A written specification (a numbered rule, a table row) states one obligation per rule, in one
+  sentence. Its values and examples live only in the tests that check it, so each is written
+  once; a type (`distinct`, a constructor that validates) carries the rest. When the
+  specification and a test say the same value, delete it from the specification.
